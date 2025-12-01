@@ -1,0 +1,86 @@
+---
+@include:
+  - "src/**/*.js"
+  - "src/**/*.ts"
+  - "lib/**/*.js"
+  - "lib/**/*.ts"
+@exclude:
+  - "*.test.js"
+  - "*.spec.js"
+  - "node_modules/**"
+  - "dist/**"
+  - "*.min.js"
+@recipe: "documentation"
+@temperature: 0.1
+@max_tokens: 3000
+project: "My Library"
+version: "2.1.0"
+author: "Developer Name"
+---
+
+# API Documentation for {{filename}}
+
+Generate comprehensive documentation for this {{project}} source file.
+
+## File Information
+- **Filename:** {{filename}}
+- **Path:** {{filepath}}
+- **Project:** {{project}}
+- **Version:** {{version}}
+
+## Source Code
+```javascript
+{{content}}
+```
+
+## Documentation Requirements
+
+Please provide detailed documentation in the following format:
+
+### Overview
+- Purpose and functionality of this file/module
+- Key features and capabilities
+- Dependencies and requirements
+
+### Classes/Functions Documentation
+
+For each class or function found:
+
+#### `FunctionName(param1, param2)`
+- **Description:** What the function does
+- **Parameters:** 
+  - `param1` (type): Description
+  - `param2` (type): Description
+- **Returns:** (type) Description of return value
+- **Throws:** (error) Description of exceptions
+- **Example:** Code usage example
+- **Notes:** Additional context or warnings
+
+#### `ClassName`
+- **Description:** Purpose of the class
+- **Constructor:** `new ClassName(options)` - Description of constructor parameters
+- **Methods:** List and document all public methods
+- **Properties:** Document important properties
+- **Example:** Class usage example
+
+### Usage Examples
+- Practical code examples
+- Common use cases
+- Best practices
+
+### Dependencies
+- External modules required
+- Internal dependencies
+- Version requirements
+
+### Notes & Caveats
+- Important limitations
+- Performance considerations
+- Platform-specific behavior
+- Breaking changes (if applicable)
+
+## Output Format
+
+Please format the output as clean Markdown that can be included in API documentation. Use proper headings, code blocks with syntax highlighting, and clear formatting.
+
+Make the documentation comprehensive but concise, focusing on what developers need to know to use this code effectively.
