@@ -1,0 +1,22 @@
+---
+include:
+  - "components/Button.js"
+recipe: "code-review"
+temperature: 0.3
+project_name: "Test Project"
+review_focus: "code quality and best practices"
+---
+
+Please perform a {{review_focus}} review of the following file from {{project_name}}.
+
+File: {{filename}}
+Path: {{filepath}}
+
+Content:
+{{content}}
+
+Please provide:
+1. Code quality issues
+2. Best practices recommendations
+3. Security concerns (if any)
+4. Overall assessment

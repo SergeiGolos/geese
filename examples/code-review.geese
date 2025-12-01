@@ -1,0 +1,80 @@
+---
+@include:
+  - "src/**/*.js"
+  - "src/**/*.jsx"
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+@exclude:
+  - "*.test.js"
+  - "*.spec.js"
+  - "node_modules/**"
+  - "dist/**"
+  - "build/**"
+@recipe: "code-review"
+@temperature: 0.3
+@max_tokens: 2000
+project_name: "My Awesome Project"
+review_focus: "performance and security"
+---
+
+Please perform a comprehensive {{review_focus}} review of the following file from {{project_name}}.
+
+## File Information
+- **Filename:** {{filename}}
+- **Path:** {{filepath}}
+- **Size:** {{content.length}} characters
+
+## Code to Review
+```javascript
+{{content}}
+```
+
+## Review Guidelines
+
+Please analyze the code and provide feedback on:
+
+### Security
+- Authentication and authorization issues
+- Input validation and sanitization
+- SQL injection, XSS, and other vulnerabilities
+- Sensitive data exposure
+- Dependency security
+
+### Performance
+- Algorithmic efficiency
+- Memory usage patterns
+- Database query optimization
+- Caching opportunities
+- Resource management
+
+### Code Quality
+- Code organization and structure
+- Error handling
+- Naming conventions
+- Comments and documentation
+- Testability
+
+## Expected Output Format
+
+### Summary
+- Overall rating (1-10)
+- Critical issues found
+- Positive aspects
+
+### Issues Found
+1. **[High/Medium/Low]** - Brief description
+   - Location (line numbers if applicable)
+   - Explanation of the issue
+   - Recommended fix
+
+### Recommendations
+- Specific actionable suggestions
+- Code examples where helpful
+- Best practice references
+
+### Security Assessment
+- Overall security posture
+- Specific security concerns
+- Recommended security improvements
+
+Thank you for your thorough analysis!

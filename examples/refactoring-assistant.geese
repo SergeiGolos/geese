@@ -1,0 +1,105 @@
+---
+@include:
+  - "src/**/*.js"
+  - "src/**/*.jsx"
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+@exclude:
+  - "*.test.js"
+  - "*.spec.js"
+  - "node_modules/**"
+  - "dist/**"
+@recipe: "refactoring"
+@temperature: 0.2
+@max_tokens: 2500
+project_name: "Legacy System"
+refactoring_goal: "modernize and optimize"
+target_framework: "React 18"
+---
+
+# Refactoring Analysis for {{filename}}
+
+Analyze the following file from {{project_name}} and provide refactoring suggestions to {{refactoring_goal}} the code.
+
+## File Information
+- **Filename:** {{filename}}
+- **Path:** {{filepath}}
+- **Size:** {{content.length}} characters
+- **Target Framework:** {{target_framework}}
+
+## Current Code
+```javascript
+{{content}}
+```
+
+## Analysis Requirements
+
+Please analyze the code and provide recommendations for:
+
+### Code Structure
+- Component organization
+- Separation of concerns
+- Code duplication
+- Complex functions that need to be broken down
+
+### Modernization Opportunities
+- ES6+ features that can replace older patterns
+- Modern React patterns (hooks, functional components)
+- Async/await vs callbacks/promises
+- Module system improvements
+
+### Performance Optimizations
+- Rendering optimizations
+- Memory leaks
+- Unnecessary re-renders
+- Bundle size improvements
+
+### Best Practices
+- Error handling improvements
+- Type safety opportunities
+- Testing friendliness
+- Accessibility considerations
+
+## Expected Output Format
+
+### Quick Assessment
+- **Current State Score:** (1-10)
+- **Effort Required:** (Low/Medium/High)
+- **Priority:** (Low/Medium/High)
+
+### Refactoring Plan
+
+#### Phase 1: Quick Wins
+1. **[Issue]** - Brief description
+   - **Impact:** Why this matters
+   - **Solution:** How to fix it
+   - **Code Example:** Show before/after
+
+#### Phase 2: Structural Changes
+1. **[Issue]** - Brief description
+   - **Impact:** Why this matters
+   - **Solution:** How to fix it
+   - **Code Example:** Show before/after
+
+#### Phase 3: Advanced Optimizations
+1. **[Issue]** - Brief description
+   - **Impact:** Why this matters
+   - **Solution:** How to fix it
+   - **Code Example:** Show before/after
+
+### Migration Checklist
+- [ ] Action item 1
+- [ ] Action item 2
+- [ ] Action item 3
+
+### Risks and Considerations
+- Breaking changes that might affect other parts of the system
+- Testing requirements
+- Rollback strategy
+
+### Next Steps
+- Immediate actions to take
+- Long-term improvement roadmap
+- Recommended tools/libraries
+
+Please provide specific, actionable advice with code examples where helpful.
