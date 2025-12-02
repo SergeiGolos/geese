@@ -4,6 +4,7 @@ const { Command } = require('commander');
 const path = require('path');
 const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
+const inquirer = require('inquirer');
 
 // Import our modules
 const GeeseParser = require('../src/geese-parser');
@@ -13,8 +14,8 @@ const ReportGenerator = require('../src/report-generator');
 const program = new Command();
 
 program
-  .name('geese-batch')
-  .description('CLI tool for processing .geese files with AI-powered transformations (batch mode)')
+  .name('geese')
+  .description('CLI tool for processing .geese files with AI-powered transformations')
   .version('1.0.0');
 
 program
@@ -23,6 +24,7 @@ program
   .option('-o, --output <dir>', 'Output directory for logs', './logs')
   .option('-g, --goose-path <path>', 'Path to goose executable', 'goose')
   .option('--dry-run', 'Show what would be processed without executing goose')
+  .option('--yes', 'Skip interactive selection and process all files')
   .action(async (directory, options) => {
     try {
       await main(directory, options);
@@ -33,7 +35,7 @@ program
   });
 
 async function main(directory, options) {
-  console.log(chalk.blue('🦢 Geese - AI-powered file processing tool (Batch Mode)'));
+  console.log(chalk.blue('🦢 Geese - AI-powered file processing tool'));
   console.log(chalk.gray(`Working directory: ${path.resolve(directory)}`));
   
   // Initialize components
@@ -67,21 +69,45 @@ async function main(directory, options) {
     geeseFiles = [filePath];
   } else {
     // Find all .geese files in directory
-    geeseFiles = parser.findGeeseFiles(path.resolve(directory));
+    const foundFiles = parser.findGeeseFiles(path.resolve(directory));
     
-    if (geeseFiles.length === 0) {
+    if (foundFiles.length === 0) {
       console.log(chalk.yellow('No .geese files found in the specified directory.'));
       return;
     }
+
+    if (options.yes) {
+      geeseFiles = foundFiles;
+      console.log(chalk.blue(`📋 Found ${geeseFiles.length} .geese file(s) - processing all automatically`));
+    } else if (foundFiles.length === 1) {
+      geeseFiles = foundFiles;
+      console.log(chalk.blue(`📋 Found 1 .geese file: ${path.basename(foundFiles[0])}`));
+    } else {
+      // Interactive selection for .geese files
+      console.log(chalk.blue(`📋 Found ${foundFiles.length} .geese file(s)`));
+
+      const { selectedFiles } = await inquirer.prompt([
+        {
+          type: 'checkbox',
+          name: 'selectedFiles',
+          message: 'Select .geese files to process:',
+          choices: foundFiles.map(file => ({
+            name: `${path.basename(file)} (${getFileSize(file)})`,
+            value: file,
+            checked: true
+          })),
+          validate: (answer) => {
+            if (answer.length < 1) {
+              return 'You must choose at least one file.';
+            }
+            return true;
+          }
+        }
+      ]);
+
+      geeseFiles = selectedFiles;
+    }
   }
-  
-  // Process all .geese files automatically
-  console.log(chalk.blue(`📋 Found ${geeseFiles.length} .geese file(s):`));
-  geeseFiles.forEach((file, index) => {
-    console.log(chalk.gray(`  ${index + 1}. ${path.basename(file)} (${getFileSize(file)})`));
-  });
-  
-  console.log(chalk.blue(`🚀 Processing all ${geeseFiles.length} .geese file(s) automatically`));
   
   // Process each .geese file
   const allSessions = [];
@@ -94,7 +120,7 @@ async function main(directory, options) {
       parser.validateGeeseFile(geeseData.frontmatter);
       
       // Collect target files
-      const targetFiles = parser.collectTargetFiles(
+      let targetFiles = parser.collectTargetFiles(
         geeseData.frontmatter,
         path.dirname(geeseFile)
       );
@@ -104,9 +130,9 @@ async function main(directory, options) {
         continue;
       }
       
-      console.log(chalk.green(`  📁 Found ${targetFiles.length} target file(s) - processing all automatically`));
+      console.log(chalk.green(`  📁 Processing ${targetFiles.length} target file(s)`));
       
-      // Process all target files automatically
+      // Process target files
       for (const targetFile of targetFiles) {
         const relativePath = path.relative(path.dirname(geeseFile), targetFile);
         console.log(chalk.cyan(`  🔄 Processing: ${relativePath}`));
