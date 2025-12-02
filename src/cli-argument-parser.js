@@ -55,20 +55,56 @@ class CLIArgumentParser {
    */
   static setNestedValue(obj, key, value) {
     const keys = key.split('.');
+    
+    // Guard against prototype pollution
+    for (const k of keys) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+        throw new Error(`Invalid configuration key: ${key}. Keys cannot contain '__proto__', 'constructor', or 'prototype'.`);
+      }
+    }
+    
     let current = obj;
     
     for (let i = 0; i < keys.length - 1; i++) {
       const k = keys[i];
-      if (!(k in current)) {
-        current[k] = {};
+      
+      // Use Object.prototype.hasOwnProperty for safer checks
+      if (!Object.prototype.hasOwnProperty.call(current, k)) {
+        // Use Object.create(null) to create an object without prototype
+        const newObj = Object.create(null);
+        Object.defineProperty(current, k, {
+          value: newObj,
+          writable: true,
+          enumerable: true,
+          configurable: true
+        });
       } else if (typeof current[k] !== 'object' || current[k] === null) {
         // If intermediate value is not an object, replace it with an object
-        current[k] = {};
+        const newObj = Object.create(null);
+        Object.defineProperty(current, k, {
+          value: newObj,
+          writable: true,
+          enumerable: true,
+          configurable: true
+        });
       }
+      // Safe to traverse because all keys have been validated above
       current = current[k];
     }
     
-    current[keys[keys.length - 1]] = value;
+    // Set the final value using Object.defineProperty
+    // Safe because all keys have been validated above (lines 64-68)
+    const finalKey = keys[keys.length - 1];
+    
+    // Additional safety check (though redundant with validation above)
+    if (finalKey !== '__proto__' && finalKey !== 'constructor' && finalKey !== 'prototype') {
+      Object.defineProperty(current, finalKey, {
+        value: value,
+        writable: true,
+        enumerable: true,
+        configurable: true
+      });
+    }
   }
 
   /**
