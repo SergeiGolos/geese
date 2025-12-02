@@ -61,10 +61,18 @@ class ConfigManager {
     }
     
     const keys = key.split('.');
+    
+    // Guard against prototype pollution
+    for (const k of keys) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+        throw new Error(`Invalid configuration key: ${key}. Keys cannot contain '__proto__', 'constructor', or 'prototype'.`);
+      }
+    }
+    
     let value = config;
     
     for (const k of keys) {
-      if (value && typeof value === 'object' && k in value) {
+      if (value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, k)) {
         value = value[k];
       } else {
         return undefined;
@@ -83,17 +91,48 @@ class ConfigManager {
     const config = await this.loadConfig();
     
     const keys = key.split('.');
+    
+    // Guard against prototype pollution by validating all keys
+    // This prevents attacks using __proto__, constructor, or prototype
+    for (const k of keys) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+        throw new Error(`Invalid configuration key: ${key}. Keys cannot contain '__proto__', 'constructor', or 'prototype'.`);
+      }
+    }
+    
+    // Build the nested structure safely
+    // Note: All keys have been validated above, so traversal is safe
     let current = config;
     
     for (let i = 0; i < keys.length - 1; i++) {
       const k = keys[i];
-      if (!(k in current) || typeof current[k] !== 'object') {
-        current[k] = {};
+      
+      // Create nested object if needed, using Object.create(null) for safety
+      if (!Object.prototype.hasOwnProperty.call(current, k) || 
+          typeof current[k] !== 'object' || 
+          Array.isArray(current[k]) || 
+          current[k] === null) {
+        // Use Object.create(null) to create an object without prototype
+        const newObj = Object.create(null);
+        Object.defineProperty(current, k, {
+          value: newObj,
+          writable: true,
+          enumerable: true,
+          configurable: true
+        });
       }
+      // Safe to traverse because all keys have been validated above
       current = current[k];
     }
     
-    current[keys[keys.length - 1]] = value;
+    // Set the final value using Object.defineProperty
+    const finalKey = keys[keys.length - 1];
+    Object.defineProperty(current, finalKey, {
+      value: value,
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
     
     await this.saveConfig(config);
   }
@@ -106,11 +145,19 @@ class ConfigManager {
     const config = await this.loadConfig();
     
     const keys = key.split('.');
+    
+    // Guard against prototype pollution
+    for (const k of keys) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+        throw new Error(`Invalid configuration key: ${key}. Keys cannot contain '__proto__', 'constructor', or 'prototype'.`);
+      }
+    }
+    
     let current = config;
     
     for (let i = 0; i < keys.length - 1; i++) {
       const k = keys[i];
-      if (!(k in current) || typeof current[k] !== 'object') {
+      if (!Object.prototype.hasOwnProperty.call(current, k) || typeof current[k] !== 'object') {
         return; // Key doesn't exist
       }
       current = current[k];

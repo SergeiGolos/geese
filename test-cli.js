@@ -181,6 +181,24 @@ test('Exclude patterns filter files correctly', () => {
   }
 });
 
+// Test 11: Prototype pollution protection
+test('Config manager prevents prototype pollution', () => {
+  const ConfigManager = require('./src/config-manager');
+  const manager = new ConfigManager();
+  
+  // Try to pollute prototype
+  let error = null;
+  try {
+    exec(`node ${GEESE_BIN} config --set __proto__.polluted "bad"`);
+  } catch (e) {
+    error = e;
+  }
+  
+  if (!error || !error.message.includes('Invalid configuration key')) {
+    throw new Error('Prototype pollution not prevented');
+  }
+});
+
 // Cleanup after tests
 cleanup();
 
