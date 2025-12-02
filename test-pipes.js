@@ -5,10 +5,14 @@
  */
 
 const path = require('path');
+const os = require('os');
 const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
 const pipeOperations = require('./src/pipe-operations');
 const GeeseParser = require('./src/geese-parser');
+
+// Get cross-platform temp directory
+const TEMP_DIR = os.tmpdir();
 
 let passed = 0;
 let failed = 0;
@@ -165,7 +169,7 @@ test('executePipeChain without pipes', () => {
 // Test 6: File operations
 test('readFile operation', () => {
   // Create a temp file
-  const tempDir = path.join('/tmp', 'geese-pipe-test');
+  const tempDir = path.join(TEMP_DIR, 'geese-pipe-test');
   fs.ensureDirSync(tempDir);
   const tempFile = path.join(tempDir, 'test.txt');
   fs.writeFileSync(tempFile, 'test content', 'utf8');
@@ -191,7 +195,7 @@ test('test operation', () => {
 
 // Test 8: GeeseParser integration with $ prefix
 test('Parser handles $ prefix for system properties', () => {
-  const tempDir = path.join('/tmp', 'geese-parser-test');
+  const tempDir = path.join(TEMP_DIR, 'geese-parser-test');
   fs.ensureDirSync(tempDir);
   const testFile = path.join(tempDir, 'test.geese');
   
@@ -224,7 +228,7 @@ Test template`;
 
 // Test 9: Parser with @ prefix backward compatibility
 test('Parser converts @ prefix to $ prefix', () => {
-  const tempDir = path.join('/tmp', 'geese-parser-test2');
+  const tempDir = path.join(TEMP_DIR, 'geese-parser-test2');
   fs.ensureDirSync(tempDir);
   const testFile = path.join(tempDir, 'test.geese');
   
@@ -253,7 +257,7 @@ Test template`;
 
 // Test 10: Parser processes pipe operations in context
 test('Parser executes pipe operations in prepareContext', () => {
-  const tempDir = path.join('/tmp', 'geese-parser-test3');
+  const tempDir = path.join(TEMP_DIR, 'geese-parser-test3');
   fs.ensureDirSync(tempDir);
   
   const testGeese = path.join(tempDir, 'test.geese');
@@ -284,7 +288,7 @@ Test template`;
 
 // Test 11: Complex pipe chain in parser
 test('Parser handles complex pipe chains', () => {
-  const tempDir = path.join('/tmp', 'geese-parser-test4');
+  const tempDir = path.join(TEMP_DIR, 'geese-parser-test4');
   fs.ensureDirSync(tempDir);
   
   const testGeese = path.join(tempDir, 'test.geese');
@@ -315,7 +319,7 @@ Test template`;
 
 // Test 12: Parser validation with $ prefix
 test('Parser validates $include and $recipe', () => {
-  const tempDir = path.join('/tmp', 'geese-parser-test5');
+  const tempDir = path.join(TEMP_DIR, 'geese-parser-test5');
   fs.ensureDirSync(tempDir);
   const testFile = path.join(tempDir, 'test.geese');
   
@@ -341,7 +345,7 @@ Test template`;
 
 // Test 13: collectTargetFiles works with $ prefix
 test('Parser collectTargetFiles works with $ prefix', () => {
-  const tempDir = path.join('/tmp', 'geese-parser-test6');
+  const tempDir = path.join(TEMP_DIR, 'geese-parser-test6');
   fs.ensureDirSync(tempDir);
   
   // Create test files

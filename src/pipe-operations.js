@@ -72,24 +72,32 @@ class PipeOperations {
     
     for (let i = 0; i < argsStr.length; i++) {
       const char = argsStr[i];
+      const prevChar = i > 0 ? argsStr[i - 1] : null;
       
-      if ((char === '"' || char === "'") && !inQuotes) {
+      // Check for escaped quotes
+      const isEscaped = prevChar === '\\';
+      
+      if ((char === '"' || char === "'") && !inQuotes && !isEscaped) {
         inQuotes = true;
         quoteChar = char;
-      } else if (char === quoteChar && inQuotes) {
+      } else if (char === quoteChar && inQuotes && !isEscaped) {
         inQuotes = false;
         quoteChar = null;
-        if (current) {
-          args.push(current);
-          current = '';
-        }
+        // Push even empty strings
+        args.push(current);
+        current = '';
       } else if (char === ' ' && !inQuotes) {
         if (current) {
           args.push(current);
           current = '';
         }
-      } else {
-        current += char;
+      } else if (char !== '\\' || isEscaped) {
+        // Add character (but skip escape character unless it's escaped itself)
+        if (isEscaped && char === '\\') {
+          current = current.slice(0, -1) + char; // Replace previous backslash with current one
+        } else if (!(char === '\\' && i + 1 < argsStr.length && (argsStr[i + 1] === '"' || argsStr[i + 1] === "'"))) {
+          current += char;
+        }
       }
     }
     
@@ -305,7 +313,11 @@ class PipeOperations {
     });
 
     this.register('stringify', (value, args) => {
-      const indent = args[0] ? parseInt(args[0], 10) : 2;
+      let indent = 2;
+      if (args[0]) {
+        const parsed = parseInt(args[0], 10);
+        indent = isNaN(parsed) ? 2 : parsed;
+      }
       return JSON.stringify(value, null, indent);
     });
 
