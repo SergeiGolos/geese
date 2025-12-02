@@ -24,7 +24,10 @@ class GeeseParser {
     try {
       let fileContent = fs.readFileSync(filePath, 'utf8');
       
-      // For now, parse normally and let the context preparation handle @ properties
+      // Preprocess: Remove @ prefix from YAML keys for compatibility
+      // This allows files to use @include, @recipe, etc. which will be normalized to include, recipe
+      fileContent = fileContent.replace(/^(\s*)@([a-zA-Z_][a-zA-Z0-9_]*):/gm, '$1$2:');
+      
       const parsed = matter(fileContent);
       
       return {
@@ -66,26 +69,17 @@ class GeeseParser {
     
     // Collect files from include patterns
     for (const pattern of include) {
-      const fullPattern = path.join(baseDir, pattern).replace(/\\/g, '/');
-      const files = glob.sync(fullPattern);
+      const files = glob.sync(pattern, {
+        cwd: baseDir,
+        absolute: true,
+        ignore: exclude,
+        nodir: true
+      });
       allFiles = allFiles.concat(files);
     }
     
     // Remove duplicates
     allFiles = [...new Set(allFiles)];
-    
-    // Filter out excluded files
-    if (exclude.length > 0) {
-      const excludedPatterns = exclude.map(pattern => 
-        path.join(baseDir, pattern).replace(/\\/g, '/')
-      );
-      
-      return allFiles.filter(file => {
-        return !excludedPatterns.some(pattern => {
-          return file.match(pattern.replace(/\*/g, '.*'));
-        });
-      });
-    }
     
     return allFiles;
   }

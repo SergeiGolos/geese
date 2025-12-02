@@ -1,9 +1,96 @@
-const { spawn } = require('child_process');
-const path = require('path');
+const CLIRunner = require('./cli-runner');
 
-class GooseRunner {
+class GooseRunner extends CLIRunner {
   constructor() {
-    this.defaultGoosePath = 'goose'; // Assumes goose is in PATH
+    super();
+  }
+
+  /**
+   * Get the default executable path for goose
+   * @returns {string} Default executable path
+   */
+  getDefaultPath() {
+    return 'goose'; // Assumes goose is in PATH
+  }
+
+  /**
+   * Get the required frontmatter properties for .geese files
+   * @returns {Object} Object with required and optional properties
+   */
+  getFrontmatterSchema() {
+    return {
+      required: ['include', 'recipe'],
+      optional: ['exclude', 'model', 'temperature', 'max_tokens', 'flags']
+    };
+  }
+
+  /**
+   * Get the default frontmatter template for new .geese files
+   * @returns {Object} Default frontmatter object
+   */
+  getDefaultFrontmatter() {
+    return {
+      include: ['src/**/*.js'],
+      exclude: ['node_modules/**', '*.test.js'],
+      recipe: 'code-review',
+      temperature: 0.7,
+      max_tokens: 2000
+    };
+  }
+
+  /**
+   * Get the default template content for new .geese files
+   * @returns {string} Default template content
+   */
+  getDefaultTemplate() {
+    return `Please analyze the following file.
+
+File: {{filename}}
+Path: {{filepath}}
+
+Content:
+{{content}}
+
+Please provide:
+1. Analysis of the code
+2. Suggestions for improvement
+3. Any issues found`;
+  }
+
+  /**
+   * Build goose-specific command-line arguments from configuration
+   * @param {Object} config - Configuration object
+   * @returns {Array} Array of command-line arguments
+   */
+  buildArgs(config) {
+    const args = [];
+    
+    // Add model if specified
+    if (config.model) {
+      args.push('--model', config.model);
+    }
+    
+    // Add recipe if specified  
+    if (config.recipe) {
+      args.push('--recipe', config.recipe);
+    }
+    
+    // Add temperature if specified
+    if (config.temperature !== undefined) {
+      args.push('--temperature', String(config.temperature));
+    }
+    
+    // Add max_tokens if specified
+    if (config.max_tokens !== undefined) {
+      args.push('--max-tokens', String(config.max_tokens));
+    }
+    
+    // Add any additional flags from config
+    if (config.flags && Array.isArray(config.flags)) {
+      args.push(...config.flags);
+    }
+    
+    return args;
   }
 
   /**
@@ -13,124 +100,23 @@ class GooseRunner {
    * @returns {Promise<Object>} Response with output and metadata
    */
   async executeGoose(prompt, config = {}) {
-    return new Promise((resolve, reject) => {
-      const startTime = Date.now();
-      
-      // Build goose command arguments
-      const args = [];
-      
-      // Add model if specified
-      if (config.model) {
-        args.push('--model', config.model);
-      }
-      
-      // Add recipe if specified  
-      if (config.recipe) {
-        args.push('--recipe', config.recipe);
-      }
-      
-      // Add any additional flags from config
-      if (config.flags && Array.isArray(config.flags)) {
-        args.push(...config.flags);
-      }
-      
-      // Spawn goose process
-      const gooseProcess = spawn(this.defaultGoosePath, args, {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        shell: true
-      });
-      
-      let stdout = '';
-      let stderr = '';
-      
-      gooseProcess.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-      
-      gooseProcess.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-      
-      gooseProcess.on('close', (code) => {
-        const endTime = Date.now();
-        const duration = endTime - startTime;
-        
-        if (code === 0) {
-          resolve({
-            success: true,
-            output: stdout.trim(),
-            error: stderr.trim(),
-            duration,
-            exitCode: code
-          });
-        } else {
-          reject(new Error(`Goose process exited with code ${code}: ${stderr}`));
-        }
-      });
-      
-      gooseProcess.on('error', (error) => {
-        reject(new Error(`Failed to start goose process: ${error.message}`));
-      });
-      
-      // Send prompt to goose
-      gooseProcess.stdin.write(prompt);
-      gooseProcess.stdin.end();
-    });
+    return this.execute(prompt, config);
   }
 
   /**
-   * Execute goose for a file context
-   * @param {string} targetFile - Path to target file
-   * @param {string} prompt - The generated prompt
-   * @param {Object} gooseConfig - Goose configuration from .geese file
-   * @returns {Promise<Object>} Response with output and metadata
-   */
-  async processFile(targetFile, prompt, gooseConfig) {
-    try {
-      const result = await this.executeGoose(prompt, gooseConfig);
-      
-      return {
-        ...result,
-        targetFile,
-        timestamp: new Date().toISOString()
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-        targetFile,
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
-
-  /**
-   * Set custom goose path
+   * Set custom goose path (for backward compatibility)
    * @param {string} goosePath - Path to goose executable
    */
   setGoosePath(goosePath) {
-    this.defaultGoosePath = goosePath;
+    this.setPath(goosePath);
   }
 
   /**
-   * Check if goose is available
+   * Check if goose is available (for backward compatibility)
    * @returns {Promise<boolean>} True if goose is available
    */
   async checkGoeseAvailable() {
-    return new Promise((resolve) => {
-      const process = spawn(this.defaultGoosePath, ['--version'], {
-        stdio: 'pipe',
-        shell: true
-      });
-      
-      process.on('close', (code) => {
-        resolve(code === 0);
-      });
-      
-      process.on('error', () => {
-        resolve(false);
-      });
-    });
+    return this.checkAvailable();
   }
 }
 
