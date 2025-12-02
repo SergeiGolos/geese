@@ -4,54 +4,233 @@ const { Command } = require('commander');
 const path = require('path');
 const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
+const inquirer = require('inquirer').default || require('inquirer');
+const matter = require('gray-matter');
 
 // Import our modules
+const ConfigManager = require('../src/config-manager');
+const ToolRegistry = require('../src/tool-registry');
 const GeeseParser = require('../src/geese-parser');
-const GooseRunner = require('../src/goose-runner');
 const ReportGenerator = require('../src/report-generator');
 
 const program = new Command();
 
 program
-  .name('geese-batch')
-  .description('CLI tool for processing .geese files with AI-powered transformations (batch mode)')
+  .name('geese')
+  .description('CLI tool for processing .geese files with AI-powered transformations')
   .version('1.0.0');
 
+// Config command
 program
-  .argument('[directory]', 'Directory to search for .geese files', '.')
-  .option('-f, --file <file>', 'Process a specific .geese file')
-  .option('-o, --output <dir>', 'Output directory for logs', './logs')
-  .option('-g, --goose-path <path>', 'Path to goose executable', 'goose')
-  .option('--dry-run', 'Show what would be processed without executing goose')
-  .action(async (directory, options) => {
+  .command('config')
+  .description('Manage configuration settings')
+  .option('--get <key>', 'Get a configuration value')
+  .option('--set <key> <value>', 'Set a configuration value')
+  .option('--delete <key>', 'Delete a configuration value')
+  .option('--list', 'List all configuration')
+  .action(async (options) => {
     try {
-      await main(directory, options);
+      await configCommand(options);
     } catch (error) {
-      console.error(chalk.red('Fatal error:'), error.message);
+      console.error(chalk.red('Error:'), error.message);
       process.exit(1);
     }
   });
 
-async function main(directory, options) {
-  console.log(chalk.blue('🦢 Geese - AI-powered file processing tool (Batch Mode)'));
+// New command
+program
+  .command('new <name>')
+  .description('Create a new .geese file')
+  .option('-t, --tool <tool>', 'CLI tool to use (default: goose)', 'goose')
+  .option('-o, --output <dir>', 'Output directory', '.')
+  .action(async (name, options) => {
+    try {
+      await newCommand(name, options);
+    } catch (error) {
+      console.error(chalk.red('Error:'), error.message);
+      process.exit(1);
+    }
+  });
+
+// Run command
+program
+  .command('run [directory]')
+  .description('Process .geese files')
+  .option('-f, --file <file>', 'Process a specific .geese file')
+  .option('-o, --output <dir>', 'Output directory for logs (default: "./logs")')
+  .option('-g, --goose-path <path>', 'Path to goose executable')
+  .option('--dry-run', 'Show what would be processed without executing')
+  .action(async (directory, options) => {
+    try {
+      await runCommand(directory || '.', options);
+    } catch (error) {
+      console.error(chalk.red('Error:'), error.message);
+      process.exit(1);
+    }
+  });
+
+// Default to run command if no command specified
+program.action(async (options) => {
+  await runCommand('.', options);
+});
+
+/**
+ * Config command handler
+ */
+async function configCommand(options) {
+  const configManager = new ConfigManager();
+
+  if (options.list) {
+    const config = await configManager.loadConfig();
+    console.log(chalk.blue('Current configuration:'));
+    console.log(JSON.stringify(config, null, 2));
+    return;
+  }
+
+  if (options.get) {
+    const value = await configManager.get(options.get);
+    if (value === undefined) {
+      console.log(chalk.yellow(`No value found for key: ${options.get}`));
+    } else {
+      console.log(JSON.stringify(value, null, 2));
+    }
+    return;
+  }
+
+  if (options.set) {
+    const [key, ...valueParts] = process.argv.slice(process.argv.indexOf('--set') + 1);
+    let value = valueParts.join(' ');
+    
+    // Try to parse as JSON for objects/arrays/numbers/booleans
+    try {
+      value = JSON.parse(value);
+    } catch (e) {
+      // Keep as string if not valid JSON
+    }
+    
+    await configManager.set(key, value);
+    console.log(chalk.green(`✓ Set ${key} = ${JSON.stringify(value)}`));
+    console.log(chalk.gray(`Config saved to: ${configManager.getConfigPath()}`));
+    return;
+  }
+
+  if (options.delete) {
+    await configManager.delete(options.delete);
+    console.log(chalk.green(`✓ Deleted ${options.delete}`));
+    return;
+  }
+
+  // No options provided, show current config
+  const config = await configManager.loadConfig();
+  console.log(chalk.blue('Current configuration:'));
+  console.log(JSON.stringify(config, null, 2));
+  console.log(chalk.gray(`\nConfig file: ${configManager.getConfigPath()}`));
+  console.log(chalk.gray('\nUsage:'));
+  console.log(chalk.gray('  geese config --list'));
+  console.log(chalk.gray('  geese config --get <key>'));
+  console.log(chalk.gray('  geese config --set <key> <value>'));
+  console.log(chalk.gray('  geese config --delete <key>'));
+}
+
+/**
+ * New command handler
+ */
+async function newCommand(name, options) {
+  const { tool, output } = options;
+  
+  // Validate tool
+  if (!ToolRegistry.has(tool)) {
+    throw new Error(`Unknown tool: ${tool}. Available: ${ToolRegistry.getToolNames().join(', ')}`);
+  }
+  
+  // Get tool runner for defaults
+  const runner = ToolRegistry.getRunner(tool);
+  const configManager = new ConfigManager();
+  const toolConfig = await configManager.getToolConfig(tool);
+  
+  // Get default frontmatter and merge with config
+  const defaultFrontmatter = runner.getDefaultFrontmatter();
+  const frontmatter = { ...defaultFrontmatter, ...toolConfig };
+  
+  // Get default template
+  const template = runner.getDefaultTemplate();
+  
+  // Create .geese file
+  const filename = name.endsWith('.geese') ? name : `${name}.geese`;
+  const filepath = path.join(output, filename);
+  
+  // Check if file already exists
+  if (await fs.pathExists(filepath)) {
+    const { overwrite } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'overwrite',
+        message: `File ${filename} already exists. Overwrite?`,
+        default: false
+      }
+    ]);
+    
+    if (!overwrite) {
+      console.log(chalk.yellow('Cancelled.'));
+      return;
+    }
+  }
+  
+  // Build file content with frontmatter
+  const fileContent = matter.stringify(template, frontmatter);
+  
+  // Write file
+  await fs.writeFile(filepath, fileContent, 'utf8');
+  
+  console.log(chalk.green(`✓ Created ${filename}`));
+  console.log(chalk.gray(`  Path: ${filepath}`));
+  console.log(chalk.gray(`  Tool: ${tool}`));
+}
+
+/**
+ * Run command handler
+ */
+async function runCommand(directory, options) {
+  console.log(chalk.blue('🦢 Geese - AI-powered file processing tool'));
   console.log(chalk.gray(`Working directory: ${path.resolve(directory)}`));
+  
+  // Load configuration
+  const configManager = new ConfigManager();
+  const config = await configManager.loadConfig();
   
   // Initialize components
   const parser = new GeeseParser();
-  const gooseRunner = new GooseRunner();
-  const reportGenerator = new ReportGenerator(options.output);
+  const reportGenerator = new ReportGenerator(options.output || './logs');
   
-  // Set custom goose path if provided
-  if (options.goosePath) {
-    gooseRunner.setGoosePath(options.goosePath);
+  // Determine tool and get runner
+  const tool = config.defaultTool || 'goose';
+  const toolRunner = ToolRegistry.getRunner(tool);
+  
+  // Apply config overrides
+  const toolConfig = await configManager.getToolConfig(tool);
+  if (options.goosePath || toolConfig.path) {
+    toolRunner.setPath(options.goosePath || toolConfig.path);
   }
   
-  // Check if goose is available (unless dry run)
+  // Check if tool is available (unless dry run)
   if (!options.dryRun) {
-    const isGooseAvailable = await gooseRunner.checkGoeseAvailable();
-    if (!isGooseAvailable) {
-      console.log(chalk.yellow('⚠️  Warning: goose not found in PATH. Make sure goose is installed and accessible.'));
-      console.log(chalk.yellow('Proceeding in batch mode...'));
+    const isAvailable = await toolRunner.checkAvailable();
+    if (!isAvailable) {
+      console.log(chalk.yellow(`⚠️  Warning: ${tool} not found in PATH.`));
+      const { continueAnyway } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'continueAnyway',
+          message: 'Continue in dry-run mode?',
+          default: true
+        }
+      ]);
+      
+      if (continueAnyway) {
+        options.dryRun = true;
+      } else {
+        process.exit(1);
+      }
     }
   }
   
@@ -65,29 +244,58 @@ async function main(directory, options) {
       throw new Error(`File not found: ${filePath}`);
     }
     geeseFiles = [filePath];
+    console.log(chalk.blue(`📄 Processing file: ${path.basename(filePath)}`));
   } else {
     // Find all .geese files in directory
     geeseFiles = parser.findGeeseFiles(path.resolve(directory));
     
     if (geeseFiles.length === 0) {
       console.log(chalk.yellow('No .geese files found in the specified directory.'));
+      console.log(chalk.gray('Tip: Use "geese new <name>" to create a new .geese file'));
       return;
+    }
+    
+    // Auto-run if only one file
+    if (geeseFiles.length === 1) {
+      console.log(chalk.blue(`📄 Found one .geese file: ${path.basename(geeseFiles[0])}`));
+    } else {
+      // Show selection screen for multiple files
+      console.log(chalk.blue(`📋 Found ${geeseFiles.length} .geese file(s)`));
+      
+      const { selectedFiles } = await inquirer.prompt([
+        {
+          type: 'checkbox',
+          name: 'selectedFiles',
+          message: 'Select .geese files to process:',
+          choices: geeseFiles.map(file => ({
+            name: `${path.basename(file)} (${getFileSize(file)})`,
+            value: file,
+            checked: false
+          })),
+          pageSize: 10,
+          validate: (answer) => {
+            if (answer.length === 0) {
+              return 'You must select at least one file';
+            }
+            return true;
+          }
+        }
+      ]);
+      
+      geeseFiles = selectedFiles;
     }
   }
   
-  // Process all .geese files automatically
-  console.log(chalk.blue(`📋 Found ${geeseFiles.length} .geese file(s):`));
-  geeseFiles.forEach((file, index) => {
-    console.log(chalk.gray(`  ${index + 1}. ${path.basename(file)} (${getFileSize(file)})`));
-  });
-  
-  console.log(chalk.blue(`🚀 Processing all ${geeseFiles.length} .geese file(s) automatically`));
+  if (geeseFiles.length === 0) {
+    console.log(chalk.yellow('No files selected for processing.'));
+    return;
+  }
   
   // Process each .geese file
   const allSessions = [];
   
   for (const geeseFile of geeseFiles) {
-    console.log(chalk.blue(`\n📖 Processing .geese file: ${path.basename(geeseFile)}`));
+    console.log(chalk.blue(`\n📖 Processing: ${path.basename(geeseFile)}`));
     
     try {
       const geeseData = parser.parseGeeseFile(geeseFile);
@@ -100,20 +308,45 @@ async function main(directory, options) {
       );
       
       if (targetFiles.length === 0) {
-        console.log(chalk.yellow(`  ⚠️  No target files found for include/exclude patterns`));
+        console.log(chalk.yellow('  ⚠️  No target files found'));
         continue;
       }
       
-      console.log(chalk.green(`  📁 Found ${targetFiles.length} target file(s) - processing all automatically`));
+      console.log(chalk.green(`  📁 Found ${targetFiles.length} target file(s)`));
       
-      // Process all target files automatically
-      for (const targetFile of targetFiles) {
+      // Show target file selection
+      let selectedTargets = targetFiles;
+      if (targetFiles.length > 1) {
+        const { targets } = await inquirer.prompt([
+          {
+            type: 'checkbox',
+            name: 'targets',
+            message: 'Select target files to process:',
+            choices: targetFiles.map(file => ({
+              name: `${path.relative(path.dirname(geeseFile), file)} (${getFileSize(file)})`,
+              value: file,
+              checked: true
+            })),
+            pageSize: 10
+          }
+        ]);
+        
+        selectedTargets = targets;
+      }
+      
+      if (selectedTargets.length === 0) {
+        console.log(chalk.yellow('  No target files selected'));
+        continue;
+      }
+      
+      // Process selected target files
+      for (const targetFile of selectedTargets) {
         const relativePath = path.relative(path.dirname(geeseFile), targetFile);
         console.log(chalk.cyan(`  🔄 Processing: ${relativePath}`));
         
         const session = await processTargetFile(
           parser,
-          gooseRunner,
+          toolRunner,
           reportGenerator,
           geeseData,
           targetFile,
@@ -126,21 +359,25 @@ async function main(directory, options) {
       }
       
     } catch (error) {
-      console.error(chalk.red(`  ❌ Error processing ${geeseFile}: ${error.message}`));
+      console.error(chalk.red(`  ❌ Error: ${error.message}`));
     }
   }
   
   // Generate final report
   if (allSessions.length > 0) {
-    console.log(chalk.blue('\n📊 Generating final report...'));
+    console.log(chalk.blue('\n📊 Generating report...'));
     const report = await reportGenerator.saveReport(allSessions);
-    console.log(chalk.green(`✅ Processing complete! ${allSessions.length} session(s) logged.`));
+    console.log(chalk.green(`✅ Complete! Processed ${allSessions.length} session(s)`));
+    console.log(chalk.gray(`   Report: ${report}`));
   } else {
-    console.log(chalk.yellow('\n⚠️  No sessions were processed.'));
+    console.log(chalk.yellow('\n⚠️  No sessions were processed'));
   }
 }
 
-async function processTargetFile(parser, gooseRunner, reportGenerator, geeseData, targetFile, dryRun = false) {
+/**
+ * Process a single target file
+ */
+async function processTargetFile(parser, toolRunner, reportGenerator, geeseData, targetFile, dryRun = false) {
   const startTime = Date.now();
   
   reportGenerator.logSessionStart(geeseData.filePath, targetFile);
@@ -153,13 +390,13 @@ async function processTargetFile(parser, gooseRunner, reportGenerator, geeseData
     const prompt = parser.renderTemplate(geeseData.template, context);
     
     if (dryRun) {
-      console.log(chalk.cyan(`  📝 Generated prompt (dry run):`));
-      console.log(chalk.gray(prompt.substring(0, 200) + '...'));
+      console.log(chalk.cyan(`    📝 Dry run - prompt preview:`));
+      console.log(chalk.gray('    ' + prompt.substring(0, 150).replace(/\n/g, '\n    ') + '...'));
       return null;
     }
     
-    // Execute goose
-    const result = await gooseRunner.processFile(targetFile, prompt, context._gooseConfig);
+    // Execute tool
+    const result = await toolRunner.processFile(targetFile, prompt, context._gooseConfig);
     const endTime = Date.now();
     
     // Create session entry
@@ -175,7 +412,12 @@ async function processTargetFile(parser, gooseRunner, reportGenerator, geeseData
     
     session.success = result.success;
     
-    reportGenerator.logSessionEnd(geeseData.filePath, targetFile, endTime - startTime, result.success);
+    reportGenerator.logSessionEnd(
+      geeseData.filePath,
+      targetFile,
+      endTime - startTime,
+      result.success
+    );
     
     return session;
     
@@ -183,7 +425,6 @@ async function processTargetFile(parser, gooseRunner, reportGenerator, geeseData
     const endTime = Date.now();
     console.error(chalk.red(`    ❌ Error: ${error.message}`));
     
-    // Create error session entry
     const session = reportGenerator.createSessionEntry(
       geeseData.filePath,
       targetFile,
@@ -196,12 +437,20 @@ async function processTargetFile(parser, gooseRunner, reportGenerator, geeseData
     
     session.success = false;
     
-    reportGenerator.logSessionEnd(geeseData.filePath, targetFile, endTime - startTime, false);
+    reportGenerator.logSessionEnd(
+      geeseData.filePath,
+      targetFile,
+      endTime - startTime,
+      false
+    );
     
     return session;
   }
 }
 
+/**
+ * Get human-readable file size
+ */
 function getFileSize(filePath) {
   try {
     const stats = fs.statSync(filePath);
@@ -211,13 +460,13 @@ function getFileSize(filePath) {
     if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
     return Math.round(bytes / (1024 * 1024)) + ' MB';
   } catch {
-    return 'unknown size';
+    return 'unknown';
   }
 }
 
-// Handle unhandled promise rejections
+// Handle unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
-  console.error(chalk.red('Unhandled Rejection at:'), promise, 'reason:', reason);
+  console.error(chalk.red('Unhandled error:'), reason);
   process.exit(1);
 });
 
