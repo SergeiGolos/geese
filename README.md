@@ -10,6 +10,9 @@ Geese is a powerful CLI tool that processes `.geese` files to apply AI-powered t
 - **Comprehensive Logging**: Automatic markdown reports with detailed session information
 - **Configurable AI Integration**: Works with Goose AI assistant
 - **Dry Run Mode**: Preview what would be processed without executing
+- **Configuration Management**: Store default settings in `~/.geese/config.json`
+- **Multiple Tools Support**: Extensible architecture for different AI CLI tools
+- **Easy File Creation**: Generate new .geese files with `geese new` command
 
 ## 📦 Installation
 
@@ -28,9 +31,25 @@ npm link
 
 ## 🎯 Quick Start
 
-1. Create a `.geese` file in your project directory
-2. Run `geese` to process files interactively
-3. Review the generated report in the `./logs` directory
+1. (Optional) Set up your configuration defaults:
+   ```bash
+   geese config --set goose.model gpt-4
+   geese config --set goose.temperature 0.7
+   ```
+
+2. Create a `.geese` file in your project directory:
+   ```bash
+   geese new code-review
+   ```
+
+3. Edit the `.geese` file to customize the template and file patterns
+
+4. Run `geese` to process files interactively:
+   ```bash
+   geese
+   ```
+
+5. Review the generated report in the `./logs` directory
 
 ## 📄 .geese File Format
 
@@ -89,43 +108,122 @@ Content:
 
 ## 🛠️ Usage
 
-### Basic Usage
+Geese provides three main commands:
+
+- **run** - Process .geese files (default command)
+- **new** - Create a new .geese file
+- **config** - Manage configuration settings
+
+### Running Geese (Process Files)
 
 ```bash
-# Process all .geese files in current directory
+# Process all .geese files in current directory (interactive selection)
 geese
+# or explicitly
+geese run
 
 # Process specific directory
-geese ./my-project
+geese run ./my-project
 
 # Process specific .geese file
 geese -f code-review.geese
+# or
+geese run -f code-review.geese
 
 # Custom output directory for logs
-geese -o ./reports
+geese run -o ./reports
 
 # Custom goose executable path
-geese -g /path/to/goose
+geese run -g /path/to/goose
 
 # Dry run (preview only)
-geese --dry-run
+geese run --dry-run
 ```
+
+### Creating New .geese Files
+
+```bash
+# Create a new .geese file with default settings
+geese new my-review
+
+# Create with specific tool (defaults to goose)
+geese new my-review --tool goose
+
+# Create in a specific directory
+geese new my-review -o ./templates
+```
+
+The `new` command creates a .geese file with:
+- Default frontmatter properties from your config
+- Standard template content for the selected tool
+- Proper YAML formatting
+
+### Managing Configuration
+
+```bash
+# View all configuration
+geese config
+# or
+geese config --list
+
+# Get a specific configuration value
+geese config --get goose.model
+
+# Set a configuration value
+geese config --set goose.model gpt-4
+
+# Set nested properties
+geese config --set goose.temperature 0.7
+
+# Set arrays (use JSON format)
+geese config --set goose.include '["src/**/*.js", "lib/**/*.js"]'
+
+# Delete a configuration value
+geese config --delete goose.temperature
+```
+
+Configuration is stored in `~/.geese/config.json` and provides default values for new .geese files.
 
 ### Command Line Options
 
+#### Run Command
 ```
-Usage: geese [directory] [options]
+Usage: geese run [directory] [options]
 
 Arguments:
-  directory         Directory to search for .geese files (default: ".")
+  directory                 Directory to search for .geese files (default: ".")
 
 Options:
-  -f, --file <file>     Process a specific .geese file
-  -o, --output <dir>    Output directory for logs (default: "./logs")
-  -g, --goose-path <path> Path to goose executable (default: "goose")
-  --dry-run           Show what would be processed without executing goose
+  -f, --file <file>        Process a specific .geese file
+  -o, --output <dir>       Output directory for logs (default: "./logs")
+  -g, --goose-path <path>  Path to goose executable
+  --dry-run                Show what would be processed without executing
+  -h, --help               Display help for command
+```
+
+#### New Command
+```
+Usage: geese new [options] <name>
+
+Arguments:
+  name                  Name of the .geese file to create
+
+Options:
+  -t, --tool <tool>     CLI tool to use (default: "goose")
+  -o, --output <dir>    Output directory (default: ".")
+  -h, --help            Display help for command
+```
+
+#### Config Command
+```
+Usage: geese config [options]
+
+Options:
+  --get <key>          Get a configuration value
+  --set <key> <value>  Set a configuration value
+  --delete <key>       Delete a configuration value
+  --list               List all configuration
   -h, --help           Display help for command
-  -V, --version        Display version number
 ```
 
 ### Interactive File Selection
@@ -149,6 +247,66 @@ When a `.geese` file matches multiple target files, you can select specific file
  ◯ src/components/Input.jsx (3.2 KB)
  ◯ src/utils/helpers.js (8.1 KB)
 ```
+
+## ⚙️ Configuration System
+
+Geese supports a configuration system that allows you to set default values for your .geese files. Configuration is stored in `~/.geese/config.json` and is automatically applied when creating new files.
+
+### Configuration Structure
+
+Configuration is organized by tool name (e.g., `goose`, `aider`):
+
+```json
+{
+  "goose": {
+    "model": "gpt-4",
+    "temperature": 0.7,
+    "recipe": "code-review",
+    "include": ["src/**/*.js", "lib/**/*.js"],
+    "exclude": ["node_modules/**", "*.test.js"]
+  },
+  "defaultTool": "goose"
+}
+```
+
+### Setting Configuration
+
+Use the `geese config` command to manage your configuration:
+
+```bash
+# Set individual properties
+geese config --set goose.model gpt-4
+geese config --set goose.temperature 0.7
+
+# Set arrays (use JSON format)
+geese config --set goose.include '["src/**/*.js", "lib/**/*.js"]'
+
+# Set nested objects (use dot notation)
+geese config --set goose.max_tokens 2000
+```
+
+### Getting Configuration
+
+```bash
+# View all configuration
+geese config --list
+
+# Get a specific value
+geese config --get goose.model
+
+# Get a nested object
+geese config --get goose
+```
+
+### How Configuration is Applied
+
+When you create a new .geese file with `geese new`, the tool:
+
+1. Loads the default frontmatter from the tool's template
+2. Merges it with configuration from `~/.geese/config.json` for that tool
+3. Writes the combined configuration to the new file
+
+This allows you to set project-wide or machine-wide defaults without manually editing each file.
 
 ## 📊 Reports
 
