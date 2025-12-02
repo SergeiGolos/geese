@@ -28,9 +28,10 @@ class GeeseParser {
   /**
    * Parse a .geese file
    * @param {string} filePath - Path to the .geese file
+   * @param {Object} baseConfig - Base configuration from hierarchy (optional)
    * @returns {Object} Parsed content with frontmatter and template
    */
-  parseGeeseFile(filePath) {
+  parseGeeseFile(filePath, baseConfig = {}) {
     try {
       let fileContent = fs.readFileSync(filePath, 'utf8');
       
@@ -47,8 +48,38 @@ class GeeseParser {
       
       const parsed = matter(fileContent);
       
+      // Separate system properties ($) from user properties
+      const systemProps = {};
+      const userProps = {};
+      
+      for (const [key, value] of Object.entries(parsed.data)) {
+        // Ensure key is a string
+        const keyStr = String(key);
+        
+        if (keyStr.startsWith('$')) {
+          // System property with $ prefix
+          systemProps[keyStr.substring(1)] = value; // Remove $ prefix
+        } else if (SYSTEM_PROPERTY_NAMES.includes(keyStr)) {
+          // Backward compatibility: system property without $ prefix
+          systemProps[keyStr] = value;
+        } else {
+          // User property
+          userProps[keyStr] = value;
+        }
+      }
+      
+      // Merge base config with .geese file system properties
+      // .geese file properties override base config
+      const mergedConfig = this.deepMerge(baseConfig, systemProps);
+      
+      // Reconstruct frontmatter with merged config and user properties
+      const mergedFrontmatter = { ...userProps };
+      for (const [key, value] of Object.entries(mergedConfig)) {
+        mergedFrontmatter['$' + key] = value;
+      }
+      
       return {
-        frontmatter: parsed.data,
+        frontmatter: mergedFrontmatter,
         template: parsed.content,
         filePath: filePath,
         filename: path.basename(filePath, '.geese'),
@@ -57,6 +88,39 @@ class GeeseParser {
     } catch (error) {
       throw new Error(`Failed to parse .geese file ${filePath}: ${error.message}`);
     }
+  }
+  
+  /**
+   * Deep merge multiple configuration objects
+   * Later objects override earlier ones
+   * @param {...Object} configs - Configuration objects to merge
+   * @returns {Object} Merged configuration
+   */
+  deepMerge(...configs) {
+    const result = {};
+    
+    for (const config of configs) {
+      // Skip null, undefined, or non-objects
+      if (!config || typeof config !== 'object') {
+        continue;
+      }
+      
+      for (const key in config) {
+        if (Object.prototype.hasOwnProperty.call(config, key)) {
+          const value = config[key];
+          
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            // Recursively merge objects
+            result[key] = this.deepMerge(result[key] || {}, value);
+          } else {
+            // Override with new value (includes arrays)
+            result[key] = value;
+          }
+        }
+      }
+    }
+    
+    return result;
   }
 
   /**

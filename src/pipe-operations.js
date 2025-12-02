@@ -143,6 +143,11 @@ class PipeOperations {
    * @returns {any} Final result after all pipes
    */
   executePipeChain(valueStr, context) {
+    // Handle non-string values - just return them as-is
+    if (typeof valueStr !== 'string') {
+      return valueStr;
+    }
+    
     // Split on ~> to find pipes
     const parts = valueStr.split('~>');
     

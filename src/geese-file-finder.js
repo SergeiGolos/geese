@@ -1,7 +1,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
-const glob = require('glob');
+const { glob } = require('glob');
 
 class GeeseFileFinder {
   /**
@@ -59,15 +59,17 @@ class GeeseFileFinder {
       ? path.join(dir, '**/*.geese')
       : path.join(dir, '*.geese');
     
-    return new Promise((resolve, reject) => {
-      glob(pattern, { 
+    try {
+      // glob v11+ returns a promise directly
+      const files = await glob(pattern, { 
         ignore: ['**/node_modules/**', '**/dist/**'],
         nodir: true 
-      }, (err, files) => {
-        if (err) reject(err);
-        else resolve(files);
       });
-    });
+      return files;
+    } catch (error) {
+      console.warn(`Warning: Failed to find .geese files in ${dir}: ${error.message}`);
+      return [];
+    }
   }
 
   /**

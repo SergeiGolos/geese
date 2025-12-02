@@ -89,11 +89,12 @@ const pipeCommand = program
 // Run command (can be used explicitly or as default)
 const runCommandDefinition = program
   .command('run [directory]', { isDefault: true })
-  .description('Process .geese files')
+  .description('Process .geese files (discovers from global, local, and root)')
   .option('-f, --file <file>', 'Process a specific .geese file')
   .option('-o, --output <dir>', 'Output directory for logs (default: "./logs")')
   .option('-g, --goose-path <path>', 'Path to goose executable')
   .option('--dry-run', 'Show what would be processed without executing')
+  .option('--debug-config', 'Show configuration hierarchy debug information')
   .action(async (directory, options) => {
     try {
       await runCommand(directory || '.', options);
@@ -287,16 +288,32 @@ async function newCommand(name, options) {
  */
 async function runCommand(directory, options) {
   console.log(chalk.blue('🦢 Geese - AI-powered file processing tool'));
-  console.log(chalk.gray(`Working directory: ${path.resolve(directory)}`));
+  const workingDir = path.resolve(directory);
+  console.log(chalk.gray(`Working directory: ${workingDir}`));
   
-  // Load configuration
+  // Parse CLI arguments into config overrides
+  const cliConfig = CLIArgumentParser.parseToConfig(process.argv);
+  
+  // Load hierarchical configuration
   const configManager = new ConfigManager();
-  const config = await configManager.loadConfig();
+  const hierarchicalConfig = await configManager.loadHierarchicalConfig(workingDir, {}, cliConfig);
+  const config = hierarchicalConfig.config;
+  
+  // Show debug info if requested
+  if (options.debugConfig || cliConfig.debugConfig) {
+    console.log(chalk.cyan('\n🔍 Configuration Debug Info:'));
+    console.log(JSON.stringify(hierarchicalConfig, null, 2));
+    console.log();
+  }
   
   // Initialize components
   const parser = new GeeseParser();
+  const pipeOps = require('../src/pipe-operations');
   
-  // Load custom pipes from user's pipes directory
+  // Initialize pipe operations with hierarchical loading
+  await pipeOps.initializeHierarchy(workingDir);
+  
+  // Also load from old location for backward compatibility
   const homeDir = require('os').homedir();
   const pipesDir = path.join(homeDir, '.geese', 'pipes');
   parser.loadCustomPipes(pipesDir);
@@ -308,7 +325,7 @@ async function runCommand(directory, options) {
   const toolRunner = ToolRegistry.getRunner(tool);
   
   // Apply config overrides
-  const toolConfig = await configManager.getToolConfig(tool);
+  const toolConfig = config[tool] || {};
   if (options.goosePath || toolConfig.path) {
     toolRunner.setPath(options.goosePath || toolConfig.path);
   }
@@ -340,15 +357,20 @@ async function runCommand(directory, options) {
   
   if (options.file) {
     // Process specific file
-    const filePath = path.resolve(directory, options.file);
+    const filePath = path.resolve(workingDir, options.file);
     if (!await fs.pathExists(filePath)) {
       throw new Error(`File not found: ${filePath}`);
     }
     geeseFiles = [filePath];
     console.log(chalk.blue(`📄 Processing file: ${path.basename(filePath)}`));
   } else {
-    // Find all .geese files in directory
-    geeseFiles = parser.findGeeseFiles(path.resolve(directory));
+    // Use hierarchical file discovery
+    geeseFiles = await GeeseFileFinder.discoverGeeseFiles(workingDir);
+    
+    // Fallback to old method if no files found with new method
+    if (geeseFiles.length === 0) {
+      geeseFiles = parser.findGeeseFiles(workingDir);
+    }
     
     if (geeseFiles.length === 0) {
       console.log(chalk.yellow('No .geese files found in the specified directory.'));
@@ -399,7 +421,9 @@ async function runCommand(directory, options) {
     console.log(chalk.blue(`\n📖 Processing: ${path.basename(geeseFile)}`));
     
     try {
-      const geeseData = parser.parseGeeseFile(geeseFile);
+      // Parse .geese file with base configuration from hierarchy
+      const baseConfig = hierarchicalConfig.config[tool] || {};
+      const geeseData = parser.parseGeeseFile(geeseFile, baseConfig);
       parser.validateGeeseFile(geeseData.frontmatter);
       
       // Collect target files

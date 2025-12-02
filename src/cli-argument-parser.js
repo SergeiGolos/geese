@@ -74,6 +74,11 @@ class CLIArgumentParser {
    * @returns {*} Parsed value
    */
   static parseValue(value) {
+    // Handle non-string values
+    if (typeof value !== 'string') {
+      return value;
+    }
+    
     // Boolean
     if (value === 'true') return true;
     if (value === 'false') return false;
