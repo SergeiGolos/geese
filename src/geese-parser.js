@@ -11,6 +11,9 @@ const SYSTEM_PROPERTIES = [
   '$temperature', '$max_tokens', '$flags'
 ];
 
+// Extract property names without $ prefix for backward compatibility checks
+const SYSTEM_PROPERTY_NAMES = SYSTEM_PROPERTIES.map(prop => prop.substring(1));
+
 class GeeseParser {
   constructor() {
     this.handlebars = Handlebars.create();
@@ -33,7 +36,9 @@ class GeeseParser {
       
       // For backward compatibility: Convert @ prefix to $ prefix for system properties
       // @include -> $include, @recipe -> $recipe, etc.
-      fileContent = fileContent.replace(/^(\s*)@(include|exclude|recipe|model|temperature|max_tokens|flags):/gm, '$1$$$2:');
+      const propertyPattern = SYSTEM_PROPERTY_NAMES.join('|');
+      const regex = new RegExp(`^(\\s*)@(${propertyPattern}):`, 'gm');
+      fileContent = fileContent.replace(regex, '$1$$$2:');
       
       // Auto-quote pipe operations if not already quoted
       // This allows users to write: key: "value" ~> operation
@@ -81,7 +86,10 @@ class GeeseParser {
           const trimmedValue = value.trim();
           
           // Check if the entire pipe expression is already wrapped in quotes
-          const isFullyQuoted = (trimmedValue.startsWith("'") && trimmedValue.endsWith("'"));
+          const isFullyQuoted = (
+            (trimmedValue.startsWith("'") && trimmedValue.endsWith("'")) ||
+            (trimmedValue.startsWith('"') && trimmedValue.endsWith('"'))
+          );
           
           if (!isFullyQuoted) {
             // Wrap the entire expression in single quotes
@@ -168,7 +176,7 @@ class GeeseParser {
         // System property - strip $ and add to goose config
         const configKey = key.substring(1);
         gooseConfig[configKey] = value;
-      } else if (['include', 'exclude', 'recipe', 'model', 'temperature', 'max_tokens', 'flags'].includes(key)) {
+      } else if (SYSTEM_PROPERTY_NAMES.includes(key)) {
         // Backward compatibility for non-prefixed system properties
         gooseConfig[key] = value;
       } else {

@@ -155,10 +155,11 @@ Custom pipes are stored in `~/.geese/pipes/` and:
 
 ## Security Considerations
 
-1. **File Access:** `readFile` operations are restricted to relative paths from .geese file location
-2. **Code Execution:** Custom pipes use Node's require, which is safe for local files
-3. **Argument Injection:** Arguments are parsed and passed as strings, preventing code injection
-4. **Context Isolation:** Each file gets its own context object
+1. **File Access:** `readFile` operations accept relative paths, but do not restrict access to files outside the .geese file's directory. Directory traversal using `../` is possible, allowing reading any file the process has access to. Users should be cautious about which .geese files they run from untrusted sources.
+2. **Code Execution:** Custom pipes use Node's require, which executes arbitrary code from `~/.geese/pipes/`. Only load custom pipes from trusted sources. Modified pipe files are cached and require process restart to reload.
+3. **Regex Operations:** User-supplied regex patterns in `match`, `test`, and `filter` operations can cause ReDoS (Regular Expression Denial of Service) attacks with catastrophic backtracking patterns. Consider validating patterns or using timeouts for production use.
+4. **Argument Injection:** Arguments are parsed and passed as strings, preventing code injection.
+5. **Context Isolation:** Each file gets its own context object, but properties can reference each other based on iteration order.
 
 ## Future Extensibility
 

@@ -11,20 +11,21 @@ $temperature: 0.3
 
 # User properties support pipe operations
 # No outer quotes needed - the parser auto-quotes pipe expressions!
-project_name: "  My Demo Project  " ~> trim
-review_date: "2024-01-15" ~> default "Not Set"
+# Quotes are only needed if the value contains special YAML characters
+project_name:   My Demo Project   ~> trim
+review_date: 2024-01-15 ~> default Not Set
 
-# Example: String manipulation chains
-formatted_title: "code review report" ~> toUpperCase ~> replace " " "-"
+# Example: String manipulation chains (quotes needed for spaces without pipes causing YAML issues)
+formatted_title: code review report ~> toUpperCase ~> replace " " -
 
 # Example: List operations
-file_types: "js,jsx,ts,tsx" ~> split , ~> join " | "
+file_types: js,jsx,ts,tsx ~> split , ~> join " | "
 
 # Example: Simple data transformation
-status_count: "5" ~> parseInt
+status_count: 5 ~> parseInt
 
-# Example: Complex chain
-summary: "  review completed successfully!  " ~> trim ~> toUpperCase ~> substring 0 20
+# Example: Complex chain with leading/trailing spaces
+summary:   review completed successfully!   ~> trim ~> toUpperCase ~> substring 0 20
 ---
 
 # {{formatted_title}}

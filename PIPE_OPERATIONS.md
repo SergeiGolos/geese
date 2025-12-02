@@ -39,12 +39,12 @@ User properties become template variables and **support pipe operations**:
 
 ```yaml
 # Simple values
-project_name: "My Project"
-author: "John Doe"
+project_name: My Project
+author: John Doe
 
-# With pipe operations
-formatted_title: "code review" ~> toUpperCase
-processed_data: "a,b,c" ~> split , ~> join " | "
+# With pipe operations (no quotes needed!)
+formatted_title: code review ~> toUpperCase
+processed_data: a,b,c ~> split , ~> join " | "
 ```
 
 ## Built-in Operations

@@ -10,6 +10,7 @@ const path = require('path');
 class PipeOperations {
   constructor() {
     this.operations = new Map();
+    this.builtinOperations = new Set();
     this.registerBuiltinOperations();
   }
 
@@ -17,10 +18,16 @@ class PipeOperations {
    * Register a pipe operation
    * @param {string} name - Operation name
    * @param {Function} fn - Operation function (value, args, context) => any
+   * @param {boolean} isBuiltin - Whether this is a built-in operation
    */
-  register(name, fn) {
+  register(name, fn, isBuiltin = false) {
     if (typeof fn !== 'function') {
       throw new Error(`Pipe operation must be a function, got ${typeof fn}`);
+    }
+    if (isBuiltin) {
+      this.builtinOperations.add(name);
+    } else if (this.builtinOperations.has(name)) {
+      console.warn(`Warning: Custom pipe operation "${name}" is overwriting a built-in operation with the same name.`);
     }
     this.operations.set(name, fn);
   }
@@ -69,42 +76,51 @@ class PipeOperations {
     let current = '';
     let inQuotes = false;
     let quoteChar = null;
-    
+    let escaped = false;
+
     for (let i = 0; i < argsStr.length; i++) {
       const char = argsStr[i];
-      const prevChar = i > 0 ? argsStr[i - 1] : null;
-      
-      // Check for escaped quotes
-      const isEscaped = prevChar === '\\';
-      
-      if ((char === '"' || char === "'") && !inQuotes && !isEscaped) {
-        inQuotes = true;
-        quoteChar = char;
-      } else if (char === quoteChar && inQuotes && !isEscaped) {
-        inQuotes = false;
-        quoteChar = null;
-        // Push even empty strings
-        args.push(current);
-        current = '';
-      } else if (char === ' ' && !inQuotes) {
+
+      if (escaped) {
+        current += char;
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if ((char === '"' || char === "'")) {
+        if (!inQuotes) {
+          inQuotes = true;
+          quoteChar = char;
+          continue;
+        } else if (char === quoteChar) {
+          inQuotes = false;
+          quoteChar = null;
+          args.push(current);
+          current = '';
+          continue;
+        }
+      }
+
+      if (char === ' ' && !inQuotes) {
         if (current) {
           args.push(current);
           current = '';
         }
-      } else if (char !== '\\' || isEscaped) {
-        // Add character (but skip escape character unless it's escaped itself)
-        if (isEscaped && char === '\\') {
-          current = current.slice(0, -1) + char; // Replace previous backslash with current one
-        } else if (!(char === '\\' && i + 1 < argsStr.length && (argsStr[i + 1] === '"' || argsStr[i + 1] === "'"))) {
-          current += char;
-        }
+        continue;
       }
+
+      current += char;
     }
-    
+
     if (current) {
       args.push(current);
     }
-    
+
     return args;
   }
 
@@ -204,6 +220,8 @@ class PipeOperations {
     });
 
     // File operations
+    // WARNING: readFile does not prevent directory traversal with ../ sequences
+    // This is by design to allow flexibility, but be aware of security implications
     this.register('readFile', (value, args, context) => {
       const filePath = String(value);
       const encoding = args[0] || 'utf8';
@@ -218,8 +236,10 @@ class PipeOperations {
         throw new Error(`File not found: ${resolvedPath}`);
       }
       
+      // Note: This allows reading any file the process has access to
+      // Directory traversal with ../ is possible
       return fs.readFileSync(resolvedPath, encoding);
-    });
+    }, true);
 
     this.register('loadFile', (value, args, context) => {
       // Alias for readFile
@@ -309,7 +329,11 @@ class PipeOperations {
     // Type operations
     this.register('parseJson', (value) => {
       const str = String(value);
-      return JSON.parse(str);
+      try {
+        return JSON.parse(str);
+      } catch (err) {
+        throw new Error(`parseJson operation: Malformed JSON input. ${err.message}`);
+      }
     });
 
     this.register('stringify', (value, args) => {

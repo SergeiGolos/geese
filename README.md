@@ -109,21 +109,25 @@ User properties become available as template variables and support pipe operatio
 
 ```yaml
 # Simple value
-project_name: "My Project"
+project_name: My Project
 
-# With pipe operations
-formatted_title: "code review" ~> toUpperCase
-list_items: "a,b,c" ~> split , ~> join " | "
-file_content: "./data.txt" ~> readFile
-trimmed_value: "  hello  " ~> trim ~> toUpperCase
+# With pipe operations - quotes optional for simple values
+formatted_title: code review ~> toUpperCase
+list_items: a,b,c ~> split , ~> join " | "
+file_content: ./data.txt ~> readFile
+trimmed_value: hello ~> trim ~> toUpperCase
 ```
 
 ### Pipe Operations
 
-Pipe operations allow you to transform property values using the `~>` operator. Operations are chained left-to-right:
+Pipe operations allow you to transform property values using the `~>` operator. Operations are chained left-to-right. The parser automatically quotes pipe expressions, so you typically don't need quotes unless your value contains special YAML characters:
 
 ```yaml
-my_value: "initial value" ~> operation1 ~> operation2 arg1 arg2
+# No quotes needed for simple values
+my_value: initial value ~> operation1 ~> operation2 arg1 arg2
+
+# Quotes recommended for values with special YAML characters
+complex: "value: with colons" ~> operation
 ```
 
 #### Built-in Operations
