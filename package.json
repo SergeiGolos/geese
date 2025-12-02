@@ -10,7 +10,7 @@
     "start": "node bin/geese.js",
     "dev": "node bin/geese.js",
     "setup": "node setup-dev.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test-cli.js"
   },
   "keywords": ["cli", "ai", "file-processing", "automation", "goose"],
   "author": "",

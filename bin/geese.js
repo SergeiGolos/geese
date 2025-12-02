@@ -52,9 +52,9 @@ program
     }
   });
 
-// Run command
-program
-  .command('run [directory]')
+// Run command (can be used explicitly or as default)
+const runCommandDefinition = program
+  .command('run [directory]', { isDefault: true })
   .description('Process .geese files')
   .option('-f, --file <file>', 'Process a specific .geese file')
   .option('-o, --output <dir>', 'Output directory for logs (default: "./logs")')
@@ -68,11 +68,6 @@ program
       process.exit(1);
     }
   });
-
-// Default to run command if no command specified
-program.action(async (options) => {
-  await runCommand('.', options);
-});
 
 /**
  * Config command handler
