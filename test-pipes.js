@@ -142,22 +142,22 @@ test('default operation with non-empty value', () => {
 
 // Test 5: Pipe chain execution
 test('executePipeChain with single operation', () => {
-  const result = pipeOperations.executePipeChain('  hello  |> trim', {});
+  const result = pipeOperations.executePipeChain('  hello  ~> trim', {});
   assertEquals(result, 'hello');
 });
 
 test('executePipeChain with multiple operations', () => {
-  const result = pipeOperations.executePipeChain('  hello world  |> trim |> toUpperCase', {});
+  const result = pipeOperations.executePipeChain('  hello world  ~> trim ~> toUpperCase', {});
   assertEquals(result, 'HELLO WORLD');
 });
 
 test('executePipeChain with operations and arguments', () => {
-  const result = pipeOperations.executePipeChain('hello world |> substring 0 5', {});
+  const result = pipeOperations.executePipeChain('hello world ~> substring 0 5', {});
   assertEquals(result, 'hello');
 });
 
 test('executePipeChain with complex chain', () => {
-  const result = pipeOperations.executePipeChain('  code review report  |> trim |> toUpperCase |> replace " " "-"', {});
+  const result = pipeOperations.executePipeChain('  code review report  ~> trim ~> toUpperCase ~> replace " " "-"', {});
   assertEquals(result, 'CODE-REVIEW-REPORT');
 });
 
@@ -267,8 +267,8 @@ test('Parser executes pipe operations in prepareContext', () => {
 $include:
   - "*.js"
 $recipe: "test"
-my_value: '"  hello  " |> trim |> toUpperCase'
-my_number: '"42" |> parseInt'
+my_value: '"  hello  " ~> trim ~> toUpperCase'
+my_number: '"42" ~> parseInt'
 ---
 Test template`;
   
@@ -298,8 +298,8 @@ test('Parser handles complex pipe chains', () => {
 $include:
   - "*.js"
 $recipe: "test"
-formatted: '"code review report" |> toUpperCase |> replace " " "-"'
-list_items: '"a,b,c" |> split , |> join " | "'
+formatted: '"code review report" ~> toUpperCase ~> replace " " "-"'
+list_items: '"a,b,c" ~> split , ~> join " | "'
 ---
 Test template`;
   

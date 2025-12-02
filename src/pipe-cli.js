@@ -183,7 +183,7 @@ class PipeCLI {
  * @returns {any} The output value that will be passed to the next pipe or stored
  * 
  * Example usage in .geese file:
- *   my_var: "initial value" |> ${name} arg1 arg2
+ *   my_var: "initial value" ~> ${name} arg1 arg2
  */
 
 module.exports = function ${name}(value, args, context) {
@@ -234,15 +234,15 @@ ${chalk.cyan('Examples:')}
 
 ${chalk.cyan('Pipe Operations in .geese Files:')}
   
-  User properties support pipe operations using the |> operator:
+  User properties support pipe operations using the ~> operator:
   
   ${chalk.gray('---')}
   ${chalk.gray('$include:')}
   ${chalk.gray('  - "src/**/*.js"')}
   ${chalk.gray('$recipe: "code-review"')}
-  ${chalk.gray('my_value: "  hello world  " |> trim |> toUpperCase')}
-  ${chalk.gray('file_content: "./data.txt" |> readFile')}
-  ${chalk.gray('list_items: "a,b,c" |> split , |> join " | "')}
+  ${chalk.gray('my_value: "  hello world  " ~> trim ~> toUpperCase')}
+  ${chalk.gray('file_content: "./data.txt" ~> readFile')}
+  ${chalk.gray('list_items: "a,b,c" ~> split , ~> join " | "')}
   ${chalk.gray('---')}
 
 ${chalk.cyan('Built-in Operations:')}

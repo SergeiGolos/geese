@@ -34,7 +34,7 @@ $recipe: "code-review"
 
 # User properties (support pipes)
 project_name: "My Project"
-formatted: '"text" |> toUpperCase'
+formatted: '"text" ~> toUpperCase'
 ```
 
 ### 2. Backward Compatibility (@ Prefix)
@@ -76,17 +76,17 @@ module.exports = function operationName(value, args, context) {
 **Decision:** Require quotes around pipe operations in YAML.
 
 **Rationale:**
-- YAML treats `|>` as special syntax
+- YAML treats `~>` as special syntax
 - Without quotes, YAML parser fails
 - Quotes ensure proper parsing
 
 **Example:**
 ```yaml
 # Correct
-my_value: '"hello" |> trim |> toUpperCase'
+my_value: '"hello" ~> trim ~> toUpperCase'
 
 # Incorrect (YAML parse error)
-my_value: "hello" |> trim |> toUpperCase
+my_value: "hello" ~> trim ~> toUpperCase
 ```
 
 ## Key Implementation Details
@@ -173,24 +173,24 @@ The current design supports:
 
 ### Pattern: Format Identifiers
 ```yaml
-identifier: '"My Project Name" |> toLowerCase |> replace " " "_"'
+identifier: '"My Project Name" ~> toLowerCase ~> replace " " "_"'
 # Result: "my_project_name"
 ```
 
 ### Pattern: Clean User Input
 ```yaml
-clean_input: '"  User Input!  " |> trim |> default "No input"'
+clean_input: '"  User Input!  " ~> trim ~> default "No input"'
 ```
 
 ### Pattern: Process Lists
 ```yaml
-tags: '"js,ts,jsx,tsx" |> split , |> join " | "'
+tags: '"js,ts,jsx,tsx" ~> split , ~> join " | "'
 # Result: "js | ts | jsx | tsx"
 ```
 
 ### Pattern: Load External Data
 ```yaml
-readme: '"./README.md" |> readFile |> substring 0 500'
+readme: '"./README.md" ~> readFile ~> substring 0 500'
 ```
 
 ## Migration Guide
@@ -223,8 +223,8 @@ project_name: "My Project"
 $include:
   - "src/**/*.js"
 $recipe: "code-review"
-project_name: '"  My Project  " |> trim'
-formatted: '"title" |> toUpperCase'
+project_name: '"  My Project  " ~> trim'
+formatted: '"title" ~> toUpperCase'
 ---
 ```
 
@@ -236,7 +236,7 @@ formatted: '"title" |> toUpperCase'
 ```
 Error: end of the stream or a document separator is expected
 ```
-**Solution:** Quote the entire value: `key: '"value" |> operation'`
+**Solution:** Quote the entire value: `key: '"value" ~> operation'`
 
 **Issue:** Operation not found
 ```

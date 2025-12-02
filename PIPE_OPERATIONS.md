@@ -2,20 +2,20 @@
 
 ## Overview
 
-Pipe operations in Geese allow you to transform property values in `.geese` files using a Unix-like pipeline syntax with the `|>` operator. This enables powerful data manipulation directly in your configuration files.
+Pipe operations in Geese allow you to transform property values in `.geese` files using a Unix-like pipeline syntax with the `~>` operator. This enables powerful data manipulation directly in your configuration files.
 
 ## Basic Syntax
 
 ```yaml
-property_name: "initial value" |> operation1 |> operation2 arg1 arg2
+property_name: "initial value" ~> operation1 ~> operation2 arg1 arg2
 ```
 
 Operations are executed left-to-right, with each operation receiving the output of the previous one.
 
 ## How It Works
 
-1. **Initial Value**: The value before the first `|>` is the starting point
-2. **Pipe Operator**: `|>` separates operations in the chain
+1. **Initial Value**: The value before the first `~>` is the starting point
+2. **Pipe Operator**: `~>` separates operations in the chain
 3. **Operations**: Each operation can take arguments separated by spaces
 4. **Chaining**: Output of one operation becomes input to the next
 5. **Result**: Final output is stored in the property
@@ -43,8 +43,8 @@ project_name: "My Project"
 author: "John Doe"
 
 # With pipe operations
-formatted_title: "code review" |> toUpperCase
-processed_data: "a,b,c" |> split , |> join " | "
+formatted_title: "code review" ~> toUpperCase
+processed_data: "a,b,c" ~> split , ~> join " | "
 ```
 
 ## Built-in Operations
@@ -55,7 +55,7 @@ processed_data: "a,b,c" |> split , |> join " | "
 Remove whitespace from both ends of a string.
 
 ```yaml
-clean_text: "  hello world  " |> trim
+clean_text: "  hello world  " ~> trim
 # Result: "hello world"
 ```
 
@@ -63,10 +63,10 @@ clean_text: "  hello world  " |> trim
 Extract a portion of the string.
 
 ```yaml
-short_title: "Very Long Title Here" |> substring 0 10
+short_title: "Very Long Title Here" ~> substring 0 10
 # Result: "Very Long "
 
-rest_of_string: "Hello World" |> substring 6
+rest_of_string: "Hello World" ~> substring 6
 # Result: "World"
 ```
 
@@ -74,7 +74,7 @@ rest_of_string: "Hello World" |> substring 6
 Convert string to uppercase.
 
 ```yaml
-shouting: "hello" |> toUpperCase
+shouting: "hello" ~> toUpperCase
 # Result: "HELLO"
 ```
 
@@ -82,7 +82,7 @@ shouting: "hello" |> toUpperCase
 Convert string to lowercase.
 
 ```yaml
-whisper: "HELLO" |> toLowerCase
+whisper: "HELLO" ~> toLowerCase
 # Result: "hello"
 ```
 
@@ -90,10 +90,10 @@ whisper: "HELLO" |> toLowerCase
 Replace all occurrences of a pattern.
 
 ```yaml
-formatted: "hello world" |> replace " " "-"
+formatted: "hello world" ~> replace " " "-"
 # Result: "hello-world"
 
-cleaned: "test@example.com" |> replace "@" " at "
+cleaned: "test@example.com" ~> replace "@" " at "
 # Result: "test at example.com"
 ```
 
@@ -101,10 +101,10 @@ cleaned: "test@example.com" |> replace "@" " at "
 Split string into an array.
 
 ```yaml
-items: "apple,banana,orange" |> split ,
+items: "apple,banana,orange" ~> split ,
 # Result: ["apple", "banana", "orange"]
 
-words: "hello world" |> split " "
+words: "hello world" ~> split " "
 # Result: ["hello", "world"]
 ```
 
@@ -112,7 +112,7 @@ words: "hello world" |> split " "
 Join array elements into a string.
 
 ```yaml
-list: "a,b,c" |> split , |> join " | "
+list: "a,b,c" ~> split , ~> join " | "
 # Result: "a | b | c"
 ```
 
@@ -122,10 +122,10 @@ list: "a,b,c" |> split , |> join " | "
 Read content from a file. Path is relative to the `.geese` file location.
 
 ```yaml
-changelog: "./CHANGELOG.md" |> readFile
+changelog: "./CHANGELOG.md" ~> readFile
 # Result: contents of CHANGELOG.md
 
-binary_data: "./data.bin" |> readFile base64
+binary_data: "./data.bin" ~> readFile base64
 # Result: base64-encoded content
 ```
 
@@ -133,7 +133,7 @@ binary_data: "./data.bin" |> readFile base64
 Alias for `readFile`.
 
 ```yaml
-template: "./template.txt" |> loadFile
+template: "./template.txt" ~> loadFile
 ```
 
 ### List Operations
@@ -142,7 +142,7 @@ template: "./template.txt" |> loadFile
 Filter array elements by regex pattern.
 
 ```yaml
-js_files: "app.js,style.css,main.js,index.html" |> split , |> filter "\.js$"
+js_files: "app.js,style.css,main.js,index.html" ~> split , ~> filter "\.js$"
 # Result: ["app.js", "main.js"]
 ```
 
@@ -151,7 +151,7 @@ Extract a property from objects in an array.
 
 ```yaml
 # Assuming array of objects
-names: '[{"name":"John"},{"name":"Jane"}]' |> parseJson |> map name
+names: '[{"name":"John"},{"name":"Jane"}]' ~> parseJson ~> map name
 # Result: ["John", "Jane"]
 ```
 
@@ -159,7 +159,7 @@ names: '[{"name":"John"},{"name":"Jane"}]' |> parseJson |> map name
 Get item at specific index.
 
 ```yaml
-second_item: "a,b,c,d" |> split , |> select 1
+second_item: "a,b,c,d" ~> split , ~> select 1
 # Result: "b"
 ```
 
@@ -167,7 +167,7 @@ second_item: "a,b,c,d" |> split , |> select 1
 Get the first element of an array.
 
 ```yaml
-first_word: "hello world foo" |> split " " |> first
+first_word: "hello world foo" ~> split " " ~> first
 # Result: "hello"
 ```
 
@@ -175,7 +175,7 @@ first_word: "hello world foo" |> split " " |> first
 Get the last element of an array.
 
 ```yaml
-last_word: "hello world foo" |> split " " |> last
+last_word: "hello world foo" ~> split " " ~> last
 # Result: "foo"
 ```
 
@@ -183,10 +183,10 @@ last_word: "hello world foo" |> split " " |> last
 Get the length of an array or string.
 
 ```yaml
-word_count: "hello world" |> split " " |> length
+word_count: "hello world" ~> split " " ~> length
 # Result: 2
 
-char_count: "hello" |> length
+char_count: "hello" ~> length
 # Result: 5
 ```
 
@@ -196,7 +196,7 @@ char_count: "hello" |> length
 Parse a JSON string.
 
 ```yaml
-data: '{"name":"John","age":30}' |> parseJson
+data: '{"name":"John","age":30}' ~> parseJson
 # Result: {name: "John", age: 30}
 ```
 
@@ -204,7 +204,7 @@ data: '{"name":"John","age":30}' |> parseJson
 Convert value to JSON string.
 
 ```yaml
-json_text: '{"name":"John"}' |> parseJson |> stringify 2
+json_text: '{"name":"John"}' ~> parseJson ~> stringify 2
 # Result: formatted JSON string
 ```
 
@@ -212,7 +212,7 @@ json_text: '{"name":"John"}' |> parseJson |> stringify 2
 Parse simple YAML format.
 
 ```yaml
-config: "name: John\nage: 30" |> parseYaml
+config: "name: John\nage: 30" ~> parseYaml
 # Result: {name: "John", age: "30"}
 ```
 
@@ -220,10 +220,10 @@ config: "name: John\nage: 30" |> parseYaml
 Parse string to integer.
 
 ```yaml
-number: "42" |> parseInt
+number: "42" ~> parseInt
 # Result: 42
 
-hex_number: "FF" |> parseInt 16
+hex_number: "FF" ~> parseInt 16
 # Result: 255
 ```
 
@@ -231,7 +231,7 @@ hex_number: "FF" |> parseInt 16
 Parse string to floating point number.
 
 ```yaml
-decimal: "3.14" |> parseFloat
+decimal: "3.14" ~> parseFloat
 # Result: 3.14
 ```
 
@@ -241,7 +241,7 @@ decimal: "3.14" |> parseFloat
 Match regex pattern and return matches.
 
 ```yaml
-numbers: "test123and456" |> match "\d+" g
+numbers: "test123and456" ~> match "\d+" g
 # Result: ["123", "456"]
 ```
 
@@ -249,7 +249,7 @@ numbers: "test123and456" |> match "\d+" g
 Test if pattern matches (returns true/false).
 
 ```yaml
-has_numbers: "test123" |> test "\d+"
+has_numbers: "test123" ~> test "\d+"
 # Result: true
 ```
 
@@ -259,10 +259,10 @@ has_numbers: "test123" |> test "\d+"
 Use fallback value if input is empty/null.
 
 ```yaml
-user_input: "" |> default "No input provided"
+user_input: "" ~> default "No input provided"
 # Result: "No input provided"
 
-user_input: "Something" |> default "No input provided"
+user_input: "Something" ~> default "No input provided"
 # Result: "Something"
 ```
 
@@ -270,7 +270,7 @@ user_input: "Something" |> default "No input provided"
 Debug operation that prints value to console and returns it unchanged.
 
 ```yaml
-debug_value: "test" |> echo |> toUpperCase
+debug_value: "test" ~> echo ~> toUpperCase
 # Prints: [PIPE DEBUG] test
 # Result: "TEST"
 ```
@@ -279,34 +279,34 @@ debug_value: "test" |> echo |> toUpperCase
 
 ### Example 1: Format Report Title
 ```yaml
-report_title: "code review for main module" |> toUpperCase |> replace " " "_"
+report_title: "code review for main module" ~> toUpperCase ~> replace " " "_"
 # Result: "CODE_REVIEW_FOR_MAIN_MODULE"
 ```
 
 ### Example 2: Process File List
 ```yaml
-files: "app.js,test.js,main.js,spec.js" |> split , |> filter "^(?!.*spec|.*test)" |> join ", "
+files: "app.js,test.js,main.js,spec.js" ~> split , ~> filter "^(?!.*spec|.*test)" ~> join ", "
 # Result: "app.js, main.js"
 ```
 
 ### Example 3: Load and Process Data
 ```yaml
-data_summary: "./data.json" |> readFile |> parseJson |> stringify 0 |> substring 0 100
+data_summary: "./data.json" ~> readFile ~> parseJson ~> stringify 0 ~> substring 0 100
 # Loads JSON file, parses it, stringifies without indent, takes first 100 chars
 ```
 
 ### Example 4: Conditional Value
 ```yaml
-user_name: "" |> default "Anonymous" |> toUpperCase
+user_name: "" ~> default "Anonymous" ~> toUpperCase
 # Result: "ANONYMOUS"
 
-user_name: "John" |> default "Anonymous" |> toUpperCase
+user_name: "John" ~> default "Anonymous" ~> toUpperCase
 # Result: "JOHN"
 ```
 
 ### Example 5: Complex String Manipulation
 ```yaml
-slug: "  Hello World - A Great Title!  " |> trim |> toLowerCase |> replace "[^a-z0-9 ]" "" |> replace " " "-"
+slug: "  Hello World - A Great Title!  " ~> trim ~> toLowerCase ~> replace "[^a-z0-9 ]" "" ~> replace " " "-"
 # Result: "hello-world--a-great-title"
 ```
 
@@ -349,7 +349,7 @@ module.exports = function reverse(value, args, context) {
 
 Usage:
 ```yaml
-reversed: "hello" |> reverse
+reversed: "hello" ~> reverse
 # Result: "olleh"
 ```
 
@@ -365,7 +365,7 @@ module.exports = function repeat(value, args, context) {
 
 Usage:
 ```yaml
-repeated: "ha" |> repeat 3
+repeated: "ha" ~> repeat 3
 # Result: "hahaha"
 ```
 
@@ -381,7 +381,7 @@ module.exports = function getContext(value, args, context) {
 
 Usage:
 ```yaml
-file: "filename" |> getContext
+file: "filename" ~> getContext
 # Gets the filename property from context
 ```
 
@@ -407,7 +407,7 @@ module.exports = function formatDate(value, args, context) {
 
 Usage:
 ```yaml
-formatted_date: "2024-01-15T10:30:00Z" |> formatDate "MM/DD/YYYY"
+formatted_date: "2024-01-15T10:30:00Z" ~> formatDate "MM/DD/YYYY"
 # Result: "01/15/2024"
 ```
 
@@ -460,7 +460,7 @@ Displays comprehensive help about pipe operations.
 Each operation should do one thing well:
 ```yaml
 # Good: Clear chain of simple operations
-title: "hello world" |> trim |> toUpperCase |> replace " " "-"
+title: "hello world" ~> trim ~> toUpperCase ~> replace " " "-"
 
 # Avoid: Complex logic in a single custom operation
 ```
@@ -468,41 +468,41 @@ title: "hello world" |> trim |> toUpperCase |> replace " " "-"
 ### 2. Use Descriptive Property Names
 ```yaml
 # Good
-formatted_review_title: "code review" |> toUpperCase
+formatted_review_title: "code review" ~> toUpperCase
 
 # Less clear
-title1: "code review" |> toUpperCase
+title1: "code review" ~> toUpperCase
 ```
 
 ### 3. Quote Values with Special Characters
 ```yaml
-# Required for values containing |>
-my_value: "value with |> in it"
+# Required for values containing ~>
+my_value: "value with ~> in it"
 
 # Required for pipe operations in YAML
-formatted: '"hello" |> trim |> toUpperCase'
+formatted: '"hello" ~> trim ~> toUpperCase'
 ```
 
 ### 4. Chain Wisely
 ```yaml
 # Good: Logical sequence
-text: "  hello  " |> trim |> toUpperCase |> substring 0 3
+text: "  hello  " ~> trim ~> toUpperCase ~> substring 0 3
 
 # Less efficient: Unnecessary operations
-text: "  hello  " |> toUpperCase |> trim |> toLowerCase |> toUpperCase
+text: "  hello  " ~> toUpperCase ~> trim ~> toLowerCase ~> toUpperCase
 ```
 
 ### 5. Use Default for Safety
 ```yaml
 # Provide fallbacks for potentially empty values
-user_input: "" |> default "Not provided"
-config_value: "" |> default "development"
+user_input: "" ~> default "Not provided"
+config_value: "" ~> default "development"
 ```
 
 ### 6. Debug with Echo
 ```yaml
 # Add echo to see intermediate values
-result: "test" |> echo |> toUpperCase |> echo |> substring 0 2
+result: "test" ~> echo ~> toUpperCase ~> echo ~> substring 0 2
 # Console will show: test, TEST
 ```
 
@@ -510,29 +510,29 @@ result: "test" |> echo |> toUpperCase |> echo |> substring 0 2
 
 ### Pattern 1: Format Identifiers
 ```yaml
-identifier: "My Project Name" |> toLowerCase |> replace " " "_"
+identifier: "My Project Name" ~> toLowerCase ~> replace " " "_"
 # my_project_name
 ```
 
 ### Pattern 2: Clean User Input
 ```yaml
-clean_input: "  User Input!  " |> trim |> default "No input"
+clean_input: "  User Input!  " ~> trim ~> default "No input"
 ```
 
 ### Pattern 3: Process List Data
 ```yaml
-tags: "javascript, typescript, node.js" |> split , |> map trim |> join " | "
+tags: "javascript, typescript, node.js" ~> split , ~> map trim ~> join " | "
 # javascript | typescript | node.js
 ```
 
 ### Pattern 4: Load External Data
 ```yaml
-readme_preview: "./README.md" |> readFile |> substring 0 500 |> trim
+readme_preview: "./README.md" ~> readFile ~> substring 0 500 ~> trim
 ```
 
 ### Pattern 5: Conditional Formatting
 ```yaml
-status: "" |> default "pending" |> toUpperCase
+status: "" ~> default "pending" ~> toUpperCase
 # PENDING
 ```
 
@@ -554,7 +554,7 @@ Error: replace operation requires 2 arguments
 ```
 Error: end of the stream or a document separator is expected
 ```
-**Solution:** Quote values containing `|>`: `'"value" |> operation'`
+**Solution:** Quote values containing `~>`: `'"value" ~> operation'`
 
 ### Issue: File Not Found
 ```
@@ -589,7 +589,7 @@ $recipe: "test"
 
 Pipe operations provide a powerful, declarative way to transform data in your `.geese` files:
 
-- 🔗 **Chain operations** with the `|>` operator
+- 🔗 **Chain operations** with the `~>` operator
 - 🎨 **Visual distinction** between system ($) and user properties
 - 🔧 **Built-in operations** for common transformations
 - 🎯 **Custom operations** for specialized needs

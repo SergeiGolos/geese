@@ -115,8 +115,8 @@ class PipeOperations {
    * @returns {any} Final result after all pipes
    */
   executePipeChain(valueStr, context) {
-    // Split on |> to find pipes
-    const parts = valueStr.split('|>');
+    // Split on ~> to find pipes
+    const parts = valueStr.split('~>');
     
     // First part is the initial value - strip quotes if present
     let value = parts[0].trim();

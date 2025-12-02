@@ -72,7 +72,7 @@ $max_tokens: 2000
 # User properties - can use pipe operations for data transformation
 project_name: "My Awesome Project"
 review_focus: "performance and security"
-formatted_date: "2024-01-15" |> default "Not Set"
+formatted_date: "2024-01-15" ~> default "Not Set"
 ---
 
 Please review the following file from {{project_name}}.
@@ -112,18 +112,18 @@ User properties become available as template variables and support pipe operatio
 project_name: "My Project"
 
 # With pipe operations
-formatted_title: "code review" |> toUpperCase
-list_items: "a,b,c" |> split , |> join " | "
-file_content: "./data.txt" |> readFile
-trimmed_value: "  hello  " |> trim |> toUpperCase
+formatted_title: "code review" ~> toUpperCase
+list_items: "a,b,c" ~> split , ~> join " | "
+file_content: "./data.txt" ~> readFile
+trimmed_value: "  hello  " ~> trim ~> toUpperCase
 ```
 
 ### Pipe Operations
 
-Pipe operations allow you to transform property values using the `|>` operator. Operations are chained left-to-right:
+Pipe operations allow you to transform property values using the `~>` operator. Operations are chained left-to-right:
 
 ```yaml
-my_value: "initial value" |> operation1 |> operation2 arg1 arg2
+my_value: "initial value" ~> operation1 ~> operation2 arg1 arg2
 ```
 
 #### Built-in Operations

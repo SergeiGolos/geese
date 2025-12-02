@@ -133,7 +133,7 @@ class GeeseParser {
     for (const [key, value] of Object.entries(userProperties)) {
       try {
         // Check if value is a string with pipe operations
-        if (typeof value === 'string' && value.includes('|>')) {
+        if (typeof value === 'string' && value.includes('~>')) {
           // Execute pipe chain with current context
           context[key] = pipeOperations.executePipeChain(value, context);
         } else {
