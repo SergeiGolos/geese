@@ -93,7 +93,12 @@ async function configCommand(options) {
   }
 
   if (options.set) {
-    const [key, ...valueParts] = process.argv.slice(process.argv.indexOf('--set') + 1);
+    const setIndex = process.argv.indexOf('--set');
+    if (setIndex === -1 || setIndex >= process.argv.length - 2) {
+      throw new Error('--set requires both key and value arguments');
+    }
+    
+    const [key, ...valueParts] = process.argv.slice(setIndex + 1);
     let value = valueParts.join(' ');
     
     // Try to parse as JSON for objects/arrays/numbers/booleans

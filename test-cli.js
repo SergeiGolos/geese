@@ -16,6 +16,9 @@ const RESET = '\x1b[0m';
 let passCount = 0;
 let failCount = 0;
 
+// Dynamically determine the geese bin path
+const GEESE_BIN = path.join(__dirname, 'bin', 'geese.js');
+
 function test(description, fn) {
   try {
     fn();
@@ -53,7 +56,7 @@ cleanup();
 
 // Test 1: Help command
 test('geese --help shows help', () => {
-  const output = exec('node bin/geese.js --help');
+  const output = exec(`node ${GEESE_BIN} --help`);
   if (!output.includes('CLI tool for processing .geese files')) {
     throw new Error('Help text not found');
   }
@@ -61,7 +64,7 @@ test('geese --help shows help', () => {
 
 // Test 2: Config command - set
 test('geese config --set works', () => {
-  const output = exec('node bin/geese.js config --set test.key "test value"');
+  const output = exec(`node ${GEESE_BIN} config --set test.key "test value"`);
   if (!output.includes('Set test.key')) {
     throw new Error('Config set failed');
   }
@@ -69,7 +72,7 @@ test('geese config --set works', () => {
 
 // Test 3: Config command - get
 test('geese config --get works', () => {
-  const output = exec('node bin/geese.js config --get test.key');
+  const output = exec(`node ${GEESE_BIN} config --get test.key`);
   if (!output.includes('test value')) {
     throw new Error('Config get failed');
   }
@@ -77,7 +80,7 @@ test('geese config --get works', () => {
 
 // Test 4: Config command - list
 test('geese config --list works', () => {
-  const output = exec('node bin/geese.js config --list');
+  const output = exec(`node ${GEESE_BIN} config --list`);
   if (!output.includes('test')) {
     throw new Error('Config list failed');
   }
@@ -86,7 +89,7 @@ test('geese config --list works', () => {
 // Test 5: New command
 test('geese new creates .geese file', () => {
   fs.ensureDirSync('/tmp/geese-cli-test');
-  exec('cd /tmp/geese-cli-test && node /home/runner/work/geese/geese/bin/geese.js new test-file -o .');
+  exec(`cd /tmp/geese-cli-test && node ${GEESE_BIN} new test-file -o .`);
   
   const filePath = '/tmp/geese-cli-test/test-file.geese';
   if (!fs.existsSync(filePath)) {
@@ -101,7 +104,7 @@ test('geese new creates .geese file', () => {
 
 // Test 6: New command with .geese extension
 test('geese new handles .geese extension', () => {
-  exec('cd /tmp/geese-cli-test && node /home/runner/work/geese/geese/bin/geese.js new another.geese -o .');
+  exec(`cd /tmp/geese-cli-test && node ${GEESE_BIN} new another.geese -o .`);
   
   const filePath = '/tmp/geese-cli-test/another.geese';
   if (!fs.existsSync(filePath)) {
@@ -132,8 +135,8 @@ Test content`;
 
 // Test 8: Config defaults applied to new files
 test('Config defaults applied to new files', () => {
-  exec('node bin/geese.js config --set goose.model gpt-4-test');
-  exec('cd /tmp/geese-cli-test && node /home/runner/work/geese/geese/bin/geese.js new with-config -o .');
+  exec(`node ${GEESE_BIN} config --set goose.model gpt-4-test`);
+  exec(`cd /tmp/geese-cli-test && node ${GEESE_BIN} new with-config -o .`);
   
   const content = fs.readFileSync('/tmp/geese-cli-test/with-config.geese', 'utf8');
   if (!content.includes('gpt-4-test')) {
