@@ -1,0 +1,14 @@
+{
+  "// Comment": "Example local/project configuration (./.geese/config.json)",
+  "// Usage": "Run 'geese config --init-local' to create this file, then customize",
+  
+  "goose": {
+    "temperature": 0.5,
+    "recipe": "code-review",
+    "include": ["src/**/*.js", "lib/**/*.js"],
+    "exclude": ["**/*.test.js", "**/*.spec.js", "dist/**"]
+  },
+  
+  "_comment": "Project-specific overrides go here",
+  "_comment2": "This will inherit settings from global config and override them"
+}

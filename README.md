@@ -4,15 +4,18 @@ Geese is a powerful CLI tool that processes `.geese` files to apply AI-powered t
 
 ## 🚀 Features
 
+- **Hierarchical Configuration**: 4-level configuration system (core → global → local → CLI)
+- **Hierarchical File Discovery**: Discover .geese files from global, local, and root directories
+- **Pipe Operations Inheritance**: Custom pipes at global and local levels with override support
 - **Template-based Processing**: Use Handlebars templates to create dynamic prompts
 - **File Pattern Matching**: Include/exclude files with glob patterns
 - **Interactive Selection**: Choose which files to process with an intuitive CLI interface
 - **Comprehensive Logging**: Automatic markdown reports with detailed session information
 - **Configurable AI Integration**: Works with Goose AI assistant
 - **Dry Run Mode**: Preview what would be processed without executing
-- **Configuration Management**: Store default settings in `~/.geese/config.json`
+- **Configuration Management**: Multi-level configuration with easy inspection and debugging
 - **Multiple Tools Support**: Extensible architecture for different AI CLI tools
-- **Easy File Creation**: Generate new .geese files with `geese new` command
+- **Easy File Creation**: Generate new .geese files with `geese new` (defaults to `.geese/` directory)
 
 ## 📦 Installation
 
@@ -50,6 +53,139 @@ npm link
    ```
 
 5. Review the generated report in the `./logs` directory
+
+## 🏗️ Hierarchical Configuration System
+
+Geese implements a 4-level configuration hierarchy where settings cascade from core defaults through multiple levels to command-line overrides. This allows you to set global defaults, project-specific settings, and runtime overrides.
+
+### Configuration Levels (Priority: Low → High)
+
+1. **Core Defaults** - Built-in application defaults
+2. **Global Config** - `~/.geese/config.json` (user-wide settings)
+3. **Local Config** - `./.geese/config.json` (project-specific settings)
+4. **CLI Arguments** - Command-line overrides (highest priority)
+
+### File Discovery (Priority: Low → High)
+
+`.geese` files are discovered from multiple locations:
+
+1. **Global**: `~/.geese/*.geese` - User-wide templates
+2. **Local**: `./.geese/*.geese` - Project-specific (recommended, created by default)
+3. **Root**: `./*.geese` - Legacy/convenience location
+
+**Note**: By default, `geese new` creates files in `./.geese/` to keep your project root clean.
+
+### Configuration Commands
+
+```bash
+# Initialize local project configuration
+geese config --init-local
+
+# View configuration hierarchy
+geese config --inspect
+
+# Show effective configuration
+geese config --show
+
+# Set global configuration
+geese config --set goose.model gpt-4
+geese config --set goose.temperature 0.8
+
+# Get configuration value
+geese config --get goose.model
+
+# List all configuration
+geese config --list
+```
+
+### Example: Multi-Level Configuration
+
+**Global Config** (`~/.geese/config.json`):
+```json
+{
+  "goose": {
+    "model": "gpt-4",
+    "temperature": 0.7
+  }
+}
+```
+
+**Local Config** (`./.geese/config.json`):
+```json
+{
+  "goose": {
+    "temperature": 0.5
+  }
+}
+```
+
+**.geese File**:
+```yaml
+---
+$model: gpt-4-turbo
+---
+```
+
+**CLI Override**:
+```bash
+geese run --temperature 0.9
+```
+
+**Result**: The effective configuration will use:
+- `model: gpt-4-turbo` (from .geese file)
+- `temperature: 0.9` (from CLI - highest priority)
+
+## 🔧 Custom Pipe Operations
+
+Geese supports custom pipe operations that can be defined at multiple levels:
+
+### Pipe Operation Hierarchy
+
+1. **Built-in**: Core operations (trim, toUpperCase, readFile, etc.)
+2. **Global**: `~/.geese/pipes/*.js` - User-wide custom operations
+3. **Local**: `./.geese/pipes/*.js` - Project-specific operations (highest priority)
+
+### Managing Custom Pipes
+
+```bash
+# List all available pipes
+geese pipe list
+
+# List pipes with source information
+geese pipe list --sources
+
+# Create a new custom pipe
+geese pipe new myCustomPipe -d "My custom operation"
+
+# Remove a custom pipe
+geese pipe remove myCustomPipe
+```
+
+### Example Custom Pipe
+
+Create `~/.geese/pipes/formatName.js`:
+
+```javascript
+/**
+ * Format a name in title case
+ */
+module.exports = function formatName(value, args, context) {
+  return String(value)
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+```
+
+Use in `.geese` file:
+```yaml
+---
+author_name: "john doe" ~> formatName
+---
+Author: {{author_name}}
+```
+
+Result: `Author: John Doe`
 
 ## 📄 .geese File Format
 

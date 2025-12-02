@@ -1,0 +1,16 @@
+{
+  "// Comment": "Example global configuration (~/.geese/config.json)",
+  "// Usage": "Copy this file to ~/.geese/config.json and customize",
+  
+  "goose": {
+    "model": "gpt-4",
+    "temperature": 0.7,
+    "max_tokens": 2000,
+    "recipe": "default"
+  },
+  
+  "defaultTool": "goose",
+  "logLevel": "info",
+  
+  "_comment": "Add your user-wide defaults here"
+}
