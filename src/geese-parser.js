@@ -3,6 +3,13 @@ const path = require('path');
 const matter = require('gray-matter');
 const Handlebars = require('handlebars');
 const glob = require('glob');
+const pipeOperations = require('./pipe-operations');
+
+// System properties that control geese behavior (use $ prefix for visual distinction)
+const SYSTEM_PROPERTIES = [
+  '$include', '$exclude', '$recipe', '$model', 
+  '$temperature', '$max_tokens', '$flags'
+];
 
 class GeeseParser {
   constructor() {
@@ -24,9 +31,9 @@ class GeeseParser {
     try {
       let fileContent = fs.readFileSync(filePath, 'utf8');
       
-      // Preprocess: Remove @ prefix from YAML keys for compatibility
-      // This allows files to use @include, @recipe, etc. which will be normalized to include, recipe
-      fileContent = fileContent.replace(/^(\s*)@([a-zA-Z_][a-zA-Z0-9_]*):/gm, '$1$2:');
+      // For backward compatibility: Convert @ prefix to $ prefix for system properties
+      // @include -> $include, @recipe -> $recipe, etc.
+      fileContent = fileContent.replace(/^(\s*)@(include|exclude|recipe|model|temperature|max_tokens|flags):/gm, '$1$$$2:');
       
       const parsed = matter(fileContent);
       
@@ -34,7 +41,8 @@ class GeeseParser {
         frontmatter: parsed.data,
         template: parsed.content,
         filePath: filePath,
-        filename: path.basename(filePath, '.geese')
+        filename: path.basename(filePath, '.geese'),
+        fileDir: path.dirname(filePath)
       };
     } catch (error) {
       throw new Error(`Failed to parse .geese file ${filePath}: ${error.message}`);
@@ -62,8 +70,9 @@ class GeeseParser {
    * @returns {Array} Array of target file paths
    */
   collectTargetFiles(frontmatter, baseDir) {
-    const include = frontmatter.include || [];
-    const exclude = frontmatter.exclude || [];
+    // Support both $ prefix and no prefix for backward compatibility
+    const include = frontmatter.$include || frontmatter.include || [];
+    const exclude = frontmatter.$exclude || frontmatter.exclude || [];
     
     let allFiles = [];
     
@@ -91,9 +100,9 @@ class GeeseParser {
    * @returns {Object} Template context
    */
   prepareContext(geeseData, targetFile) {
-    const { frontmatter, filename } = geeseData;
+    const { frontmatter, filename, fileDir } = geeseData;
     
-    // Separate goose-level properties (with @ prefix) from other properties
+    // Separate system properties ($ prefix) from user properties
     const context = {};
     const gooseConfig = {};
     
@@ -102,16 +111,37 @@ class GeeseParser {
     context.content = fs.readFileSync(targetFile, 'utf8');
     context.filepath = targetFile;
     context.geese_file = filename;
+    context._geeseFileDir = fileDir; // For pipe operations that need file resolution
     
-    // Process frontmatter properties
+    // First pass: Separate system properties from user properties
+    const userProperties = {};
     for (const [key, value] of Object.entries(frontmatter)) {
-      if (key.startsWith('@') || ['include', 'exclude', 'recipe', 'model'].includes(key)) {
-        // Handle @ prefix properties and core Goose config
-        const configKey = key.startsWith('@') ? key.substring(1) : key;
+      if (key.startsWith('$')) {
+        // System property - strip $ and add to goose config
+        const configKey = key.substring(1);
         gooseConfig[configKey] = value;
+      } else if (['include', 'exclude', 'recipe', 'model', 'temperature', 'max_tokens', 'flags'].includes(key)) {
+        // Backward compatibility for non-prefixed system properties
+        gooseConfig[key] = value;
       } else {
-        // Regular token replacement
-        context[key] = value;
+        // User property - may contain pipe operations
+        userProperties[key] = value;
+      }
+    }
+    
+    // Second pass: Process user properties with pipe operations
+    for (const [key, value] of Object.entries(userProperties)) {
+      try {
+        // Check if value is a string with pipe operations
+        if (typeof value === 'string' && value.includes('|>')) {
+          // Execute pipe chain with current context
+          context[key] = pipeOperations.executePipeChain(value, context);
+        } else {
+          // No pipes, use value as-is
+          context[key] = value;
+        }
+      } catch (error) {
+        throw new Error(`Error processing property "${key}" with pipes: ${error.message}`);
       }
     }
     
@@ -142,16 +172,38 @@ class GeeseParser {
    * @returns {boolean} True if valid
    */
   validateGeeseFile(frontmatter) {
-    // Check for required fields
-    if (!frontmatter.include || !Array.isArray(frontmatter.include)) {
-      throw new Error('.geese file must have an "include" array');
+    // Check for required fields (support both $ prefix and no prefix)
+    const include = frontmatter.$include || frontmatter.include;
+    if (!include || !Array.isArray(include)) {
+      throw new Error('.geese file must have an "$include" (or "include") array');
     }
     
-    if (!frontmatter.recipe) {
-      throw new Error('.geese file must have a "recipe" property');
+    const recipe = frontmatter.$recipe || frontmatter.recipe;
+    if (!recipe) {
+      throw new Error('.geese file must have a "$recipe" (or "recipe") property');
     }
     
     return true;
+  }
+  
+  /**
+   * Load custom pipe operations from a directory
+   * @param {string} directory - Directory containing custom pipe files
+   */
+  loadCustomPipes(directory) {
+    if (!fs.existsSync(directory)) {
+      return;
+    }
+    
+    const files = fs.readdirSync(directory).filter(f => f.endsWith('.js'));
+    for (const file of files) {
+      const filePath = path.join(directory, file);
+      try {
+        pipeOperations.loadCustomPipe(filePath);
+      } catch (error) {
+        console.warn(`Warning: Failed to load custom pipe ${file}: ${error.message}`);
+      }
+    }
   }
 }
 

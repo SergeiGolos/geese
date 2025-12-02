@@ -1,17 +1,20 @@
 ---
-@include:
+# System properties use $ prefix
+$include:
   - "src/**/*.js"
   - "src/**/*.jsx"
   - "src/**/*.ts"
   - "src/**/*.tsx"
-@exclude:
+$exclude:
   - "*.test.js"
   - "*.spec.js"
   - "node_modules/**"
   - "dist/**"
-@recipe: "refactoring"
-@temperature: 0.2
-@max_tokens: 2500
+$recipe: "refactoring"
+$temperature: 0.2
+$max_tokens: 2500
+
+# User properties
 project_name: "Legacy System"
 refactoring_goal: "modernize and optimize"
 target_framework: "React 18"

@@ -1,0 +1,66 @@
+---
+# System properties use $ prefix for visual distinction
+$include:
+  - "src/**/*.js"
+  - "src/**/*.jsx"
+$exclude:
+  - "*.test.js"
+  - "node_modules/**"
+$recipe: "code-review"
+$temperature: 0.3
+
+# User properties support pipe operations
+project_name: "  My Demo Project  " |> trim
+review_date: "2024-01-15" |> default "Not Set"
+
+# Example: Load content from file
+changelog: "./CHANGELOG.md" |> readFile |> substring 0 500
+
+# Example: String manipulation chains
+formatted_title: "code review report" |> toUpperCase |> replace " " "-"
+
+# Example: List operations
+file_types: "js,jsx,ts,tsx" |> split , |> join " | "
+
+# Example: Simple data transformation
+status_count: "5" |> parseInt
+
+# Example: Complex chain
+summary: "  review completed successfully!  " |> trim |> toUpperCase |> substring 0 20
+---
+
+# {{formatted_title}}
+
+## Project: {{project_name}}
+**Date:** {{review_date}}
+
+## File Types Being Reviewed
+{{file_types}}
+
+## Recent Changes
+{{changelog}}
+
+## Code Review Request
+
+Please review the following file:
+
+**File:** {{filename}}
+**Path:** {{filepath}}
+
+### Code to Review
+```javascript
+{{content}}
+```
+
+### Focus Areas
+- Security vulnerabilities
+- Performance optimizations
+- Code quality and best practices
+- Error handling
+- Testing coverage
+
+### Summary
+Total files reviewed: {{status_count}}
+Status: {{summary}}
+
+Please provide a detailed analysis with specific recommendations.

@@ -1,18 +1,21 @@
 ---
-@include:
+# System properties use $ prefix for visual distinction from user properties
+$include:
   - "src/**/*.js"
   - "src/**/*.jsx"
   - "src/**/*.ts"
   - "src/**/*.tsx"
-@exclude:
+$exclude:
   - "*.test.js"
   - "*.spec.js"
   - "node_modules/**"
   - "dist/**"
   - "build/**"
-@recipe: "code-review"
-@temperature: 0.3
-@max_tokens: 2000
+$recipe: "code-review"
+$temperature: 0.3
+$max_tokens: 2000
+
+# User properties - can use pipe operations for data transformation
 project_name: "My Awesome Project"
 review_focus: "performance and security"
 ---

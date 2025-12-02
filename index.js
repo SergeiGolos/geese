@@ -4,6 +4,8 @@ const ReportGenerator = require('./src/report-generator');
 const CLIRunner = require('./src/cli-runner');
 const ConfigManager = require('./src/config-manager');
 const ToolRegistry = require('./src/tool-registry');
+const PipeOperations = require('./src/pipe-operations');
+const PipeCLI = require('./src/pipe-cli');
 
 module.exports = {
   GeeseParser,
@@ -11,5 +13,7 @@ module.exports = {
   ReportGenerator,
   CLIRunner,
   ConfigManager,
-  ToolRegistry
+  ToolRegistry,
+  PipeOperations,
+  PipeCLI
 };

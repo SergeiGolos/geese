@@ -12,6 +12,7 @@ const ConfigManager = require('../src/config-manager');
 const ToolRegistry = require('../src/tool-registry');
 const GeeseParser = require('../src/geese-parser');
 const ReportGenerator = require('../src/report-generator');
+const PipeCLI = require('../src/pipe-cli');
 
 const program = new Command();
 
@@ -46,6 +47,33 @@ program
   .action(async (name, options) => {
     try {
       await newCommand(name, options);
+    } catch (error) {
+      console.error(chalk.red('Error:'), error.message);
+      process.exit(1);
+    }
+  });
+
+// Pipe command
+const pipeCommand = program
+  .command('pipe <action> [name]')
+  .description('Manage custom pipe operations')
+  .option('-d, --description <text>', 'Description for new pipe')
+  .option('-f, --force', 'Overwrite existing pipe without confirmation')
+  .action(async (action, name, options) => {
+    try {
+      if (action === 'list') {
+        await PipeCLI.listPipes();
+      } else if (action === 'new' && name) {
+        await PipeCLI.createPipe(name, options);
+      } else if (action === 'remove' && name) {
+        await PipeCLI.removePipe(name);
+      } else if (action === 'help') {
+        PipeCLI.showHelp();
+      } else {
+        console.error(chalk.red('Invalid pipe command'));
+        console.log('Usage: geese pipe <list|new|remove|help> [name]');
+        process.exit(1);
+      }
     } catch (error) {
       console.error(chalk.red('Error:'), error.message);
       process.exit(1);
@@ -200,6 +228,12 @@ async function runCommand(directory, options) {
   
   // Initialize components
   const parser = new GeeseParser();
+  
+  // Load custom pipes from user's pipes directory
+  const homeDir = require('os').homedir();
+  const pipesDir = path.join(homeDir, '.geese', 'pipes');
+  parser.loadCustomPipes(pipesDir);
+  
   const reportGenerator = new ReportGenerator(options.output || './logs');
   
   // Determine tool and get runner
