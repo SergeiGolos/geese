@@ -320,6 +320,11 @@ class ConfigManager {
     const result = {};
     
     for (const config of configs) {
+      // Skip null, undefined, or non-objects
+      if (!config || typeof config !== 'object' || Array.isArray(config)) {
+        continue;
+      }
+      
       for (const key in config) {
         if (Object.prototype.hasOwnProperty.call(config, key)) {
           const value = config[key];

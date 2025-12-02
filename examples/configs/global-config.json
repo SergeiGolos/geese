@@ -1,6 +1,6 @@
 {
-  "// Comment": "Example global configuration (~/.geese/config.json)",
-  "// Usage": "Copy this file to ~/.geese/config.json and customize",
+  "_comment_file": "Example global configuration (~/.geese/config.json)",
+  "_comment_usage": "Copy this file to ~/.geese/config.json and customize",
   
   "goose": {
     "model": "gpt-4",

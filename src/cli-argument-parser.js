@@ -61,6 +61,9 @@ class CLIArgumentParser {
       const k = keys[i];
       if (!(k in current)) {
         current[k] = {};
+      } else if (typeof current[k] !== 'object' || current[k] === null) {
+        // If intermediate value is not an object, replace it with an object
+        current[k] = {};
       }
       current = current[k];
     }

@@ -1,6 +1,6 @@
 {
-  "// Comment": "Example local/project configuration (./.geese/config.json)",
-  "// Usage": "Run 'geese config --init-local' to create this file, then customize",
+  "_comment_file": "Example local/project configuration (./.geese/config.json)",
+  "_comment_usage": "Run 'geese config --init-local' to create this file, then customize",
   
   "goose": {
     "temperature": 0.5,

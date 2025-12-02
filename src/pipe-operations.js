@@ -33,11 +33,15 @@ class PipeOperations {
       this.builtinOperations.add(name);
       this.operationSources.set(name, 'builtin');
     } else if (this.builtinOperations.has(name)) {
-      console.warn(`Warning: Custom pipe operation "${name}" is overwriting a built-in operation with the same name.`);
+      console.warn(`Warning: Custom pipe "${name}" overrides built-in operation`);
     } else if (existingSource) {
-      // Local pipes override global pipes
+      // Handle override scenarios with consistent messaging
       if (existingSource === 'global') {
         console.log(`Local pipe "${name}" overrides global pipe`);
+      } else if (existingSource === 'local') {
+        console.warn(`Warning: Pipe "${name}" is being re-registered (local override)`);
+      } else {
+        console.warn(`Warning: Pipe "${name}" overrides existing ${existingSource} pipe`);
       }
     }
     
@@ -513,8 +517,13 @@ class PipeOperations {
       if (file.endsWith('.js')) {
         const pipePath = path.join(pipesDir, file);
         try {
-          // Clear require cache to allow reloading
-          delete require.cache[require.resolve(pipePath)];
+          // Clear require cache to allow reloading (only if module exists)
+          try {
+            const resolvedPath = require.resolve(pipePath);
+            delete require.cache[resolvedPath];
+          } catch (e) {
+            // Module not in cache, which is fine
+          }
           
           const pipeName = this.loadCustomPipe(pipePath);
           this.operationSources.set(pipeName, source);
