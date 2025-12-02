@@ -112,7 +112,7 @@ test('geese new handles .geese extension', () => {
   }
 });
 
-// Test 7: Parser handles @ prefix
+// Test 7: Parser handles @ prefix (converts to $ prefix for backward compatibility)
 test('Parser handles @ prefix in frontmatter', () => {
   const testFile = '/tmp/geese-cli-test/at-prefix.geese';
   const content = `---
@@ -128,7 +128,8 @@ Test content`;
   const parser = new GeeseParser();
   const data = parser.parseGeeseFile(testFile);
   
-  if (!data.frontmatter.include || !data.frontmatter.recipe) {
+  // @ prefix should be converted to $ prefix
+  if (!data.frontmatter.$include || !data.frontmatter.$recipe) {
     throw new Error('@ prefix not handled correctly');
   }
 });

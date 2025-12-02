@@ -1,18 +1,21 @@
 ---
-@include:
+# System properties use $ prefix
+$include:
   - "src/**/*.js"
   - "src/**/*.ts"
   - "lib/**/*.js"
   - "lib/**/*.ts"
-@exclude:
+$exclude:
   - "*.test.js"
   - "*.spec.js"
   - "node_modules/**"
   - "dist/**"
   - "*.min.js"
-@recipe: "documentation"
-@temperature: 0.1
-@max_tokens: 3000
+$recipe: "documentation"
+$temperature: 0.1
+$max_tokens: 3000
+
+# User properties
 project: "My Library"
 version: "2.1.0"
 author: "Developer Name"

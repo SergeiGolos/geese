@@ -1,0 +1,62 @@
+---
+# System properties use $ prefix for visual distinction
+$include:
+  - "src/**/*.js"
+  - "src/**/*.jsx"
+$exclude:
+  - "*.test.js"
+  - "node_modules/**"
+$recipe: "code-review"
+$temperature: 0.3
+
+# User properties support pipe operations
+# No outer quotes needed - the parser auto-quotes pipe expressions!
+# Quotes are only needed if the value contains special YAML characters
+project_name:   My Demo Project   ~> trim
+review_date: 2024-01-15 ~> default Not Set
+
+# Example: String manipulation chains (quotes needed for spaces without pipes causing YAML issues)
+formatted_title: code review report ~> toUpperCase ~> replace " " -
+
+# Example: List operations
+file_types: js,jsx,ts,tsx ~> split , ~> join " | "
+
+# Example: Simple data transformation
+status_count: 5 ~> parseInt
+
+# Example: Complex chain with leading/trailing spaces
+summary:   review completed successfully!   ~> trim ~> toUpperCase ~> substring 0 20
+---
+
+# {{formatted_title}}
+
+## Project: {{project_name}}
+**Date:** {{review_date}}
+
+## File Types Being Reviewed
+{{file_types}}
+
+## Code Review Request
+
+Please review the following file:
+
+**File:** {{filename}}
+**Path:** {{filepath}}
+
+### Code to Review
+```javascript
+{{content}}
+```
+
+### Focus Areas
+- Security vulnerabilities
+- Performance optimizations
+- Code quality and best practices
+- Error handling
+- Testing coverage
+
+### Summary
+Total files reviewed: {{status_count}}
+Status: {{summary}}
+
+Please provide a detailed analysis with specific recommendations.

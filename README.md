@@ -57,18 +57,22 @@ npm link
 
 ```yaml
 ---
-include:
+# System properties use $ prefix for visual distinction
+$include:
   - "src/**/*.js"
   - "*.md"
-exclude:
+$exclude:
   - "node_modules/**"
   - "*.test.js"
-recipe: "code-review"
-model: "gpt-4"
-@temperature: 0.7
-@max_tokens: 2000
+$recipe: "code-review"
+$model: "gpt-4"
+$temperature: 0.7
+$max_tokens: 2000
+
+# User properties - can use pipe operations for data transformation
 project_name: "My Awesome Project"
 review_focus: "performance and security"
+formatted_date: "2024-01-15" ~> default "Not Set"
 ---
 
 Please review the following file from {{project_name}}.
@@ -84,19 +88,113 @@ Content:
 
 ### Frontmatter Properties
 
-#### Required Properties
-- `include`: Array of glob patterns for files to process
-- `recipe`: The Goose recipe to use
+#### System Properties ($ prefix)
+System properties control Geese behavior and are parsed once per file. They use the `$` prefix for visual distinction:
 
-#### Optional Properties
-- `exclude`: Array of glob patterns for files to exclude
-- `model`: AI model to use (e.g., "gpt-4", "claude-3")
-- **Custom Properties**: Any other properties become available as template variables
+- **Required:**
+  - `$include`: Array of glob patterns for files to process
+  - `$recipe`: The Goose recipe to use
 
-#### Goose Configuration (with @ prefix)
-- `@temperature`: AI response temperature (0-1)
-- `@max_tokens`: Maximum tokens in response
-- `@flags`: Array of additional CLI flags
+- **Optional:**
+  - `$exclude`: Array of glob patterns for files to exclude
+  - `$model`: AI model to use (e.g., "gpt-4", "claude-3")
+  - `$temperature`: AI response temperature (0-1)
+  - `$max_tokens`: Maximum tokens in response
+  - `$flags`: Array of additional CLI flags
+
+**Note:** For backward compatibility, properties with `@` prefix (like `@include`) are automatically converted to `$` prefix.
+
+#### User Properties (no prefix)
+User properties become available as template variables and support pipe operations for data transformation:
+
+```yaml
+# Simple value
+project_name: My Project
+
+# With pipe operations - quotes optional for simple values
+formatted_title: code review ~> toUpperCase
+list_items: a,b,c ~> split , ~> join " | "
+file_content: ./data.txt ~> readFile
+trimmed_value: hello ~> trim ~> toUpperCase
+```
+
+### Pipe Operations
+
+Pipe operations allow you to transform property values using the `~>` operator. Operations are chained left-to-right. The parser automatically quotes pipe expressions, so you typically don't need quotes unless your value contains special YAML characters:
+
+```yaml
+# No quotes needed for simple values
+my_value: initial value ~> operation1 ~> operation2 arg1 arg2
+
+# Quotes recommended for values with special YAML characters
+complex: "value: with colons" ~> operation
+```
+
+#### Built-in Operations
+
+**String Operations:**
+- `trim` - Remove whitespace from both ends
+- `substring start [end]` - Extract substring
+- `toUpperCase` - Convert to uppercase
+- `toLowerCase` - Convert to lowercase
+- `replace pattern replacement` - Replace all occurrences
+- `split separator` - Split string into array
+- `join separator` - Join array into string
+
+**File Operations:**
+- `readFile [encoding]` - Read file content (default: utf8)
+- `loadFile [encoding]` - Alias for readFile
+
+**List Operations:**
+- `filter pattern` - Filter array by regex pattern
+- `map property` - Extract property from objects
+- `select index` - Get item at index
+- `first` - Get first item
+- `last` - Get last item
+- `length` - Get array/string length
+
+**Type Operations:**
+- `parseJson` - Parse JSON string
+- `stringify [indent]` - Convert to JSON string
+- `parseYaml` - Parse simple YAML
+- `parseInt [radix]` - Parse integer
+- `parseFloat` - Parse float
+
+**Regex Operations:**
+- `match pattern [flags]` - Match regex pattern
+- `test pattern [flags]` - Test regex pattern
+
+**Utility Operations:**
+- `default fallback` - Use fallback if empty
+- `echo` - Debug output (prints to console)
+
+#### Custom Pipe Operations
+
+Create custom pipe operations for your specific needs:
+
+```bash
+# Create a new pipe operation
+geese pipe new myOperation -d "My custom operation"
+
+# List available operations
+geese pipe list
+
+# Remove a custom operation
+geese pipe remove myOperation
+```
+
+Custom pipes are stored in `~/.geese/pipes/` and automatically loaded. They follow this signature:
+
+```javascript
+module.exports = function myOperation(value, args, context) {
+  // value: input from previous operation
+  // args: array of arguments passed to the operation
+  // context: object with all properties (including filename, content, etc.)
+  
+  // Your transformation logic here
+  return transformedValue;
+};
+```
 
 ### Available Template Variables
 
@@ -104,15 +202,16 @@ Content:
 - `{{filepath}}`: Full path to target file
 - `{{content}}`: File content
 - `{{geese_file}}`: Name of the .geese file (without extension)
-- Any custom properties from frontmatter
+- Any custom properties from frontmatter (after pipe operations are applied)
 
 ## 🛠️ Usage
 
-Geese provides three main commands:
+Geese provides four main commands:
 
 - **run** - Process .geese files (default command)
 - **new** - Create a new .geese file
 - **config** - Manage configuration settings
+- **pipe** - Manage custom pipe operations
 
 ### Running Geese (Process Files)
 
@@ -224,6 +323,28 @@ Options:
   --delete <key>       Delete a configuration value
   --list               List all configuration
   -h, --help           Display help for command
+```
+
+#### Pipe Command
+```
+Usage: geese pipe <action> [name] [options]
+
+Actions:
+  list                 List all available pipe operations
+  new <name>           Create a new custom pipe operation
+  remove <name>        Remove a custom pipe operation
+  help                 Show detailed pipe help
+
+Options:
+  -d, --description <text>  Description for new pipe operation
+  -f, --force              Overwrite existing pipe without confirmation
+  -h, --help               Display help for command
+
+Examples:
+  geese pipe list
+  geese pipe new myPipe -d "My custom operation"
+  geese pipe remove myPipe
+  geese pipe help
 ```
 
 ### Interactive File Selection
