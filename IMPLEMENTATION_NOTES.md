@@ -71,22 +71,30 @@ module.exports = function operationName(value, args, context) {
 };
 ```
 
-### 4. YAML Quoting Requirement
+### 4. Auto-Quoting for Pipe Operations
 
-**Decision:** Require quotes around pipe operations in YAML.
+**Decision:** Automatically quote pipe operations during preprocessing.
 
 **Rationale:**
-- YAML treats `~>` as special syntax
-- Without quotes, YAML parser fails
-- Quotes ensure proper parsing
+- YAML can have issues with `~>` operator in certain contexts
+- Manual quoting is tedious and error-prone for users
+- Preprocessing transparently handles quoting
+- Users can write natural syntax: `key: "value" ~> operation`
+
+**Implementation:**
+The parser preprocesses frontmatter before YAML parsing:
+- Detects lines with `~>` operator
+- Checks if the value is already fully quoted
+- Wraps unquoted pipe expressions in single quotes
+- Escapes any single quotes in the value (YAML style: `''`)
 
 **Example:**
 ```yaml
-# Correct
-my_value: '"hello" ~> trim ~> toUpperCase'
-
-# Incorrect (YAML parse error)
+# User writes (natural syntax):
 my_value: "hello" ~> trim ~> toUpperCase
+
+# Parser auto-converts to (valid YAML):
+my_value: '"hello" ~> trim ~> toUpperCase'
 ```
 
 ## Key Implementation Details

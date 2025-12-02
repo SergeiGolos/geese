@@ -10,20 +10,21 @@ $recipe: "code-review"
 $temperature: 0.3
 
 # User properties support pipe operations
-project_name: '"  My Demo Project  " ~> trim'
-review_date: '"2024-01-15" ~> default "Not Set"'
+# No outer quotes needed - the parser auto-quotes pipe expressions!
+project_name: "  My Demo Project  " ~> trim
+review_date: "2024-01-15" ~> default "Not Set"
 
 # Example: String manipulation chains
-formatted_title: '"code review report" ~> toUpperCase ~> replace " " "-"'
+formatted_title: "code review report" ~> toUpperCase ~> replace " " "-"
 
 # Example: List operations
-file_types: '"js,jsx,ts,tsx" ~> split , ~> join " | "'
+file_types: "js,jsx,ts,tsx" ~> split , ~> join " | "
 
 # Example: Simple data transformation
-status_count: '"5" ~> parseInt'
+status_count: "5" ~> parseInt
 
 # Example: Complex chain
-summary: '"  review completed successfully!  " ~> trim ~> toUpperCase ~> substring 0 20'
+summary: "  review completed successfully!  " ~> trim ~> toUpperCase ~> substring 0 20
 ---
 
 # {{formatted_title}}

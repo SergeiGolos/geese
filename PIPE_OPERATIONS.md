@@ -474,13 +474,13 @@ formatted_review_title: "code review" ~> toUpperCase
 title1: "code review" ~> toUpperCase
 ```
 
-### 3. Quote Values with Special Characters
+### 3. No Manual Quoting Needed
 ```yaml
-# Required for values containing ~>
-my_value: "value with ~> in it"
-
-# Required for pipe operations in YAML
-formatted: '"hello" ~> trim ~> toUpperCase'
+# Pipe expressions are automatically quoted by the parser
+# Just write naturally:
+formatted: "hello" ~> trim ~> toUpperCase
+title: "code review" ~> toUpperCase ~> replace " " "-"
+list: "a,b,c" ~> split , ~> join " | "
 ```
 
 ### 4. Chain Wisely
@@ -554,7 +554,7 @@ Error: replace operation requires 2 arguments
 ```
 Error: end of the stream or a document separator is expected
 ```
-**Solution:** Quote values containing `~>`: `'"value" ~> operation'`
+**Solution:** This should not occur with the current parser as pipe expressions are automatically quoted. If you encounter this, ensure your .geese file has proper YAML formatting.
 
 ### Issue: File Not Found
 ```

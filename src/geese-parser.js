@@ -35,6 +35,11 @@ class GeeseParser {
       // @include -> $include, @recipe -> $recipe, etc.
       fileContent = fileContent.replace(/^(\s*)@(include|exclude|recipe|model|temperature|max_tokens|flags):/gm, '$1$$$2:');
       
+      // Auto-quote pipe operations if not already quoted
+      // This allows users to write: key: "value" ~> operation
+      // Instead of requiring: key: '"value" ~> operation'
+      fileContent = this.preprocessPipeOperations(fileContent);
+      
       const parsed = matter(fileContent);
       
       return {
@@ -47,6 +52,49 @@ class GeeseParser {
     } catch (error) {
       throw new Error(`Failed to parse .geese file ${filePath}: ${error.message}`);
     }
+  }
+
+  /**
+   * Preprocess pipe operations to ensure proper YAML quoting
+   * @param {string} content - File content
+   * @returns {string} Processed content
+   */
+  preprocessPipeOperations(content) {
+    // Split into frontmatter and template sections
+    const parts = content.split(/^---\s*$/m);
+    if (parts.length < 3) {
+      return content; // No frontmatter
+    }
+    
+    const frontmatter = parts[1];
+    const rest = parts.slice(2).join('---');
+    
+    // Process each line in the frontmatter
+    const lines = frontmatter.split('\n');
+    const processedLines = lines.map(line => {
+      // Check if line contains pipe operator and is a key-value pair
+      if (line.includes('~>') && /^\s*[a-zA-Z_][a-zA-Z0-9_]*:\s/.test(line)) {
+        // Extract the key and value parts
+        const match = line.match(/^(\s*[a-zA-Z_][a-zA-Z0-9_]*:\s+)(.+)$/);
+        if (match) {
+          const [, prefix, value] = match;
+          const trimmedValue = value.trim();
+          
+          // Check if the entire pipe expression is already wrapped in quotes
+          const isFullyQuoted = (trimmedValue.startsWith("'") && trimmedValue.endsWith("'"));
+          
+          if (!isFullyQuoted) {
+            // Wrap the entire expression in single quotes
+            // Escape any single quotes in the value by doubling them (YAML style)
+            const escapedValue = value.replace(/'/g, "''");
+            return `${prefix}'${escapedValue}'`;
+          }
+        }
+      }
+      return line;
+    });
+    
+    return parts[0] + '---\n' + processedLines.join('\n') + '---' + rest;
   }
 
   /**
