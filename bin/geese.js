@@ -13,6 +13,8 @@ const ToolRegistry = require('../src/tool-registry');
 const GeeseParser = require('../src/geese-parser');
 const ReportGenerator = require('../src/report-generator');
 const PipeCLI = require('../src/pipe-cli');
+const GeeseFileFinder = require('../src/geese-file-finder');
+const CLIArgumentParser = require('../src/cli-argument-parser');
 
 const program = new Command();
 
@@ -29,6 +31,9 @@ program
   .option('--set <key> <value>', 'Set a configuration value')
   .option('--delete <key>', 'Delete a configuration value')
   .option('--list', 'List all configuration')
+  .option('--inspect [directory]', 'Show configuration hierarchy')
+  .option('--show', 'Show effective configuration for current directory')
+  .option('--init-local', 'Initialize local project configuration')
   .action(async (options) => {
     try {
       await configCommand(options);
@@ -41,9 +46,9 @@ program
 // New command
 program
   .command('new <name>')
-  .description('Create a new .geese file')
+  .description('Create a new .geese file (defaults to .geese/ directory)')
   .option('-t, --tool <tool>', 'CLI tool to use (default: goose)', 'goose')
-  .option('-o, --output <dir>', 'Output directory', '.')
+  .option('-o, --output <dir>', 'Output directory (default: .geese/)')
   .action(async (name, options) => {
     try {
       await newCommand(name, options);
@@ -59,10 +64,11 @@ const pipeCommand = program
   .description('Manage custom pipe operations')
   .option('-d, --description <text>', 'Description for new pipe')
   .option('-f, --force', 'Overwrite existing pipe without confirmation')
+  .option('-s, --sources', 'Show operation sources (for list action)')
   .action(async (action, name, options) => {
     try {
       if (action === 'list') {
-        await PipeCLI.listPipes();
+        await PipeCLI.listPipes(options.sources);
       } else if (action === 'new' && name) {
         await PipeCLI.createPipe(name, options);
       } else if (action === 'remove' && name) {
@@ -83,11 +89,12 @@ const pipeCommand = program
 // Run command (can be used explicitly or as default)
 const runCommandDefinition = program
   .command('run [directory]', { isDefault: true })
-  .description('Process .geese files')
+  .description('Process .geese files (discovers from global, local, and root)')
   .option('-f, --file <file>', 'Process a specific .geese file')
   .option('-o, --output <dir>', 'Output directory for logs (default: "./logs")')
   .option('-g, --goose-path <path>', 'Path to goose executable')
   .option('--dry-run', 'Show what would be processed without executing')
+  .option('--debug-config', 'Show configuration hierarchy debug information')
   .action(async (directory, options) => {
     try {
       await runCommand(directory || '.', options);
@@ -102,6 +109,50 @@ const runCommandDefinition = program
  */
 async function configCommand(options) {
   const configManager = new ConfigManager();
+
+  if (options.initLocal) {
+    const workingDir = process.cwd();
+    const localConfigDir = await configManager.createLocalConfig(workingDir);
+    console.log(chalk.green(`✓ Initialized local configuration`));
+    console.log(chalk.gray(`  Location: ${path.join(localConfigDir, 'config.json')}`));
+    console.log(chalk.gray('\nEdit this file to add project-specific settings.'));
+    return;
+  }
+
+  if (options.inspect !== undefined) {
+    const workingDir = typeof options.inspect === 'string' ? options.inspect : process.cwd();
+    const hierarchicalConfig = await configManager.loadHierarchicalConfig(workingDir);
+    
+    console.log(chalk.blue('📊 Configuration Hierarchy'));
+    console.log(chalk.gray(`Working Directory: ${workingDir}\n`));
+    
+    // Show sources
+    console.log(chalk.cyan('Configuration Sources:'));
+    console.log(chalk.gray('  0. Core Defaults (built-in)'));
+    console.log(chalk.gray(`  1. Global: ${configManager.globalConfigFile}`));
+    const localConfigDir = configManager.getLocalConfigDir(workingDir);
+    if (localConfigDir) {
+      console.log(chalk.gray(`  2. Local: ${path.join(localConfigDir, 'config.json')}`));
+    } else {
+      console.log(chalk.gray('  2. Local: (not configured)'));
+    }
+    console.log(chalk.gray('  3. .geese File: (varies per file)'));
+    console.log(chalk.gray('  4. CLI Arguments: (runtime overrides)\n'));
+    
+    // Show merged config
+    console.log(chalk.cyan('Effective Configuration:'));
+    console.log(JSON.stringify(hierarchicalConfig.config, null, 2));
+    return;
+  }
+
+  if (options.show) {
+    const workingDir = process.cwd();
+    const hierarchicalConfig = await configManager.loadHierarchicalConfig(workingDir);
+    
+    console.log(chalk.blue('Effective Configuration:'));
+    console.log(JSON.stringify(hierarchicalConfig.config, null, 2));
+    return;
+  }
 
   if (options.list) {
     const config = await configManager.loadConfig();
@@ -158,6 +209,9 @@ async function configCommand(options) {
   console.log(chalk.gray('  geese config --get <key>'));
   console.log(chalk.gray('  geese config --set <key> <value>'));
   console.log(chalk.gray('  geese config --delete <key>'));
+  console.log(chalk.gray('  geese config --inspect [directory]'));
+  console.log(chalk.gray('  geese config --show'));
+  console.log(chalk.gray('  geese config --init-local'));
 }
 
 /**
@@ -183,9 +237,18 @@ async function newCommand(name, options) {
   // Get default template
   const template = runner.getDefaultTemplate();
   
+  // Determine output directory - default to .geese/ directory
+  const workingDir = process.cwd();
+  const outputDir = output 
+    ? path.resolve(workingDir, output)
+    : GeeseFileFinder.getDefaultOutputDir(workingDir);
+  
+  // Ensure output directory exists
+  await fs.ensureDir(outputDir);
+  
   // Create .geese file
   const filename = name.endsWith('.geese') ? name : `${name}.geese`;
-  const filepath = path.join(output, filename);
+  const filepath = path.join(outputDir, filename);
   
   // Check if file already exists
   if (await fs.pathExists(filepath)) {
@@ -213,6 +276,11 @@ async function newCommand(name, options) {
   console.log(chalk.green(`✓ Created ${filename}`));
   console.log(chalk.gray(`  Path: ${filepath}`));
   console.log(chalk.gray(`  Tool: ${tool}`));
+  
+  // Show hint about directory structure
+  if (outputDir.endsWith('.geese')) {
+    console.log(chalk.gray(`\nℹ  Files in .geese/ directory are discovered automatically`));
+  }
 }
 
 /**
@@ -220,16 +288,32 @@ async function newCommand(name, options) {
  */
 async function runCommand(directory, options) {
   console.log(chalk.blue('🦢 Geese - AI-powered file processing tool'));
-  console.log(chalk.gray(`Working directory: ${path.resolve(directory)}`));
+  const workingDir = path.resolve(directory);
+  console.log(chalk.gray(`Working directory: ${workingDir}`));
   
-  // Load configuration
+  // Parse CLI arguments into config overrides
+  const cliConfig = CLIArgumentParser.parseToConfig(process.argv);
+  
+  // Load hierarchical configuration
   const configManager = new ConfigManager();
-  const config = await configManager.loadConfig();
+  const hierarchicalConfig = await configManager.loadHierarchicalConfig(workingDir, {}, cliConfig);
+  const config = hierarchicalConfig.config;
+  
+  // Show debug info if requested
+  if (options.debugConfig || cliConfig.debugConfig) {
+    console.log(chalk.cyan('\n🔍 Configuration Debug Info:'));
+    console.log(JSON.stringify(hierarchicalConfig, null, 2));
+    console.log();
+  }
   
   // Initialize components
   const parser = new GeeseParser();
+  const pipeOps = require('../src/pipe-operations');
   
-  // Load custom pipes from user's pipes directory
+  // Initialize pipe operations with hierarchical loading
+  await pipeOps.initializeHierarchy(workingDir);
+  
+  // Also load from old location for backward compatibility
   const homeDir = require('os').homedir();
   const pipesDir = path.join(homeDir, '.geese', 'pipes');
   parser.loadCustomPipes(pipesDir);
@@ -241,7 +325,7 @@ async function runCommand(directory, options) {
   const toolRunner = ToolRegistry.getRunner(tool);
   
   // Apply config overrides
-  const toolConfig = await configManager.getToolConfig(tool);
+  const toolConfig = config[tool] || {};
   if (options.goosePath || toolConfig.path) {
     toolRunner.setPath(options.goosePath || toolConfig.path);
   }
@@ -273,15 +357,20 @@ async function runCommand(directory, options) {
   
   if (options.file) {
     // Process specific file
-    const filePath = path.resolve(directory, options.file);
+    const filePath = path.resolve(workingDir, options.file);
     if (!await fs.pathExists(filePath)) {
       throw new Error(`File not found: ${filePath}`);
     }
     geeseFiles = [filePath];
     console.log(chalk.blue(`📄 Processing file: ${path.basename(filePath)}`));
   } else {
-    // Find all .geese files in directory
-    geeseFiles = parser.findGeeseFiles(path.resolve(directory));
+    // Use hierarchical file discovery
+    geeseFiles = await GeeseFileFinder.discoverGeeseFiles(workingDir);
+    
+    // Fallback to old method if no files found with new method
+    if (geeseFiles.length === 0) {
+      geeseFiles = parser.findGeeseFiles(workingDir);
+    }
     
     if (geeseFiles.length === 0) {
       console.log(chalk.yellow('No .geese files found in the specified directory.'));
@@ -332,7 +421,9 @@ async function runCommand(directory, options) {
     console.log(chalk.blue(`\n📖 Processing: ${path.basename(geeseFile)}`));
     
     try {
-      const geeseData = parser.parseGeeseFile(geeseFile);
+      // Parse .geese file with base configuration from hierarchy
+      const baseConfig = hierarchicalConfig.config[tool] || {};
+      const geeseData = parser.parseGeeseFile(geeseFile, baseConfig);
       parser.validateGeeseFile(geeseData.frontmatter);
       
       // Collect target files

@@ -80,38 +80,78 @@ class PipeCLI {
   /**
    * List all available pipe operations
    */
-  static async listPipes() {
+  static async listPipes(showSources = false) {
     const pipeOps = require('./pipe-operations');
     
     console.log(chalk.bold('\n📦 Available Pipe Operations\n'));
 
-    // Get built-in operations
-    const allOps = pipeOps.list();
-    
-    // Get custom operations
-    const pipesDir = this.getPipesDirectory();
-    let customOps = [];
-    if (fs.existsSync(pipesDir)) {
-      customOps = fs.readdirSync(pipesDir)
-        .filter(f => f.endsWith('.js'))
-        .map(f => path.basename(f, '.js'));
-    }
+    if (showSources) {
+      // Show with source information
+      const allOps = pipeOps.listWithSources();
+      
+      // Group by source
+      const bySource = {
+        builtin: [],
+        global: [],
+        local: []
+      };
+      
+      for (const op of allOps) {
+        if (bySource[op.source]) {
+          bySource[op.source].push(op.name);
+        }
+      }
+      
+      // Display by source
+      if (bySource.builtin.length > 0) {
+        console.log(chalk.cyan('Built-in Operations:'));
+        this.displayOperationsList(bySource.builtin);
+      }
+      
+      if (bySource.global.length > 0) {
+        console.log();
+        console.log(chalk.cyan('Global Custom Operations:'));
+        const globalPipesDir = path.join(require('os').homedir(), '.geese', 'pipes');
+        console.log(chalk.gray(`  Location: ${globalPipesDir}`));
+        this.displayOperationsList(bySource.global);
+      }
+      
+      if (bySource.local.length > 0) {
+        console.log();
+        console.log(chalk.cyan('Local Custom Operations:'));
+        console.log(chalk.gray(`  Location: ./.geese/pipes/`));
+        this.displayOperationsList(bySource.local);
+      }
+    } else {
+      // Original simple listing
+      const allOps = pipeOps.list();
+      
+      // Get custom operations
+      const pipesDir = this.getPipesDirectory();
+      let customOps = [];
+      if (fs.existsSync(pipesDir)) {
+        customOps = fs.readdirSync(pipesDir)
+          .filter(f => f.endsWith('.js'))
+          .map(f => path.basename(f, '.js'));
+      }
 
-    // Display built-in operations
-    console.log(chalk.cyan('Built-in Operations:'));
-    const builtinOps = allOps.filter(op => !customOps.includes(op));
-    this.displayOperationsList(builtinOps);
+      // Display built-in operations
+      console.log(chalk.cyan('Built-in Operations:'));
+      const builtinOps = allOps.filter(op => !customOps.includes(op));
+      this.displayOperationsList(builtinOps);
 
-    // Display custom operations
-    if (customOps.length > 0) {
-      console.log();
-      console.log(chalk.cyan('Custom Operations:'));
-      console.log(chalk.gray(`  Location: ${pipesDir}`));
-      this.displayOperationsList(customOps);
+      // Display custom operations
+      if (customOps.length > 0) {
+        console.log();
+        console.log(chalk.cyan('Custom Operations:'));
+        console.log(chalk.gray(`  Location: ${pipesDir}`));
+        this.displayOperationsList(customOps);
+      }
     }
 
     console.log();
     console.log(chalk.gray('Use "geese pipe new <name>" to create a custom pipe operation.'));
+    console.log(chalk.gray('Use "geese pipe list --sources" to see operation sources.'));
   }
 
   /**

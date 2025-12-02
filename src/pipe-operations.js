@@ -6,11 +6,13 @@
 
 const fs = require('fs-extra');
 const path = require('path');
+const os = require('os');
 
 class PipeOperations {
   constructor() {
     this.operations = new Map();
     this.builtinOperations = new Set();
+    this.operationSources = new Map(); // Track where each operation came from
     this.registerBuiltinOperations();
   }
 
@@ -24,11 +26,25 @@ class PipeOperations {
     if (typeof fn !== 'function') {
       throw new Error(`Pipe operation must be a function, got ${typeof fn}`);
     }
+    
+    const existingSource = this.operationSources.get(name);
+    
     if (isBuiltin) {
       this.builtinOperations.add(name);
+      this.operationSources.set(name, 'builtin');
     } else if (this.builtinOperations.has(name)) {
-      console.warn(`Warning: Custom pipe operation "${name}" is overwriting a built-in operation with the same name.`);
+      console.warn(`Warning: Custom pipe "${name}" overrides built-in operation`);
+    } else if (existingSource) {
+      // Handle override scenarios with consistent messaging
+      if (existingSource === 'global') {
+        console.log(`Local pipe "${name}" overrides global pipe`);
+      } else if (existingSource === 'local') {
+        console.warn(`Warning: Pipe "${name}" is being re-registered (local override)`);
+      } else {
+        console.warn(`Warning: Pipe "${name}" overrides existing ${existingSource} pipe`);
+      }
     }
+    
     this.operations.set(name, fn);
   }
 
@@ -131,6 +147,11 @@ class PipeOperations {
    * @returns {any} Final result after all pipes
    */
   executePipeChain(valueStr, context) {
+    // Handle non-string values - just return them as-is
+    if (typeof valueStr !== 'string') {
+      return valueStr;
+    }
+    
     // Split on ~> to find pipes
     const parts = valueStr.split('~>');
     
@@ -439,6 +460,116 @@ class PipeOperations {
    */
   list() {
     return Array.from(this.operations.keys());
+  }
+
+  /**
+   * Initialize pipe operations with hierarchical loading
+   * @param {string} workingDir - Current working directory
+   */
+  async initializeHierarchy(workingDir) {
+    // Built-in operations are already loaded
+    
+    // Load global custom pipes
+    const globalPipesDir = path.join(os.homedir(), '.geese', 'pipes');
+    await this.loadCustomPipesFromDirectory(globalPipesDir, 'global');
+    
+    // Load local custom pipes
+    const localGeeseDir = this.findLocalGeeseDir(workingDir);
+    if (localGeeseDir) {
+      const localPipesDir = path.join(localGeeseDir, 'pipes');
+      await this.loadCustomPipesFromDirectory(localPipesDir, 'local');
+    }
+  }
+
+  /**
+   * Find local .geese directory by walking up the tree
+   * @param {string} startPath - Starting directory
+   * @returns {string|null} Path to .geese directory or null
+   */
+  findLocalGeeseDir(startPath) {
+    let currentDir = path.resolve(startPath);
+    const root = path.parse(currentDir).root;
+    
+    while (currentDir !== root) {
+      const geeseDir = path.join(currentDir, '.geese');
+      if (fs.existsSync(geeseDir)) {
+        return geeseDir;
+      }
+      currentDir = path.dirname(currentDir);
+    }
+    
+    return null;
+  }
+
+  /**
+   * Load custom pipes from a directory
+   * @param {string} pipesDir - Directory containing pipe files
+   * @param {string} source - Source identifier ('global' or 'local')
+   * 
+   * Note: Clears require cache to allow pipe reloading. This is primarily
+   * useful during development. In production, pipes are typically loaded once
+   * at startup. If memory leaks are a concern, consider not clearing the cache
+   * or implementing a more sophisticated module reloading strategy.
+   */
+  async loadCustomPipesFromDirectory(pipesDir, source) {
+    if (!(await fs.pathExists(pipesDir))) {
+      return;
+    }
+    
+    const files = await fs.readdir(pipesDir);
+    
+    for (const file of files) {
+      if (file.endsWith('.js')) {
+        const pipePath = path.join(pipesDir, file);
+        try {
+          // Clear require cache to allow reloading (only if module exists)
+          // NOTE: This can lead to memory leaks in long-running processes.
+          // For production use, consider removing this or using a module
+          // reloading library like 'decache' or 'require-reload'.
+          try {
+            const resolvedPath = require.resolve(pipePath);
+            delete require.cache[resolvedPath];
+          } catch (e) {
+            // Module not in cache, which is fine
+          }
+          
+          const pipeName = this.loadCustomPipe(pipePath);
+          this.operationSources.set(pipeName, source);
+          
+          console.log(`Loaded ${source} pipe: ${pipeName}`);
+        } catch (error) {
+          console.warn(`Warning: Failed to load pipe ${file} from ${source}: ${error.message}`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Get information about a pipe operation
+   * @param {string} name - Operation name
+   * @returns {Object} Pipe information
+   */
+  getPipeInfo(name) {
+    return {
+      name,
+      exists: this.has(name),
+      source: this.operationSources.get(name) || 'unknown',
+      isBuiltin: this.builtinOperations.has(name)
+    };
+  }
+
+  /**
+   * List all operations with their sources
+   * @returns {Array} Array of operation info objects
+   */
+  listWithSources() {
+    const operations = [];
+    
+    for (const name of this.operations.keys()) {
+      operations.push(this.getPipeInfo(name));
+    }
+    
+    return operations;
   }
 }
 
