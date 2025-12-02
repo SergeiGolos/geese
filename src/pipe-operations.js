@@ -505,6 +505,11 @@ class PipeOperations {
    * Load custom pipes from a directory
    * @param {string} pipesDir - Directory containing pipe files
    * @param {string} source - Source identifier ('global' or 'local')
+   * 
+   * Note: Clears require cache to allow pipe reloading. This is primarily
+   * useful during development. In production, pipes are typically loaded once
+   * at startup. If memory leaks are a concern, consider not clearing the cache
+   * or implementing a more sophisticated module reloading strategy.
    */
   async loadCustomPipesFromDirectory(pipesDir, source) {
     if (!(await fs.pathExists(pipesDir))) {
@@ -518,6 +523,9 @@ class PipeOperations {
         const pipePath = path.join(pipesDir, file);
         try {
           // Clear require cache to allow reloading (only if module exists)
+          // NOTE: This can lead to memory leaks in long-running processes.
+          // For production use, consider removing this or using a module
+          // reloading library like 'decache' or 'require-reload'.
           try {
             const resolvedPath = require.resolve(pipePath);
             delete require.cache[resolvedPath];

@@ -327,6 +327,12 @@ class ConfigManager {
       
       for (const key in config) {
         if (Object.prototype.hasOwnProperty.call(config, key)) {
+          // Guard against prototype pollution in configuration files
+          if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+            console.warn(`Warning: Ignoring dangerous key "${key}" in configuration`);
+            continue;
+          }
+          
           const value = config[key];
           
           if (value && typeof value === 'object' && !Array.isArray(value)) {
