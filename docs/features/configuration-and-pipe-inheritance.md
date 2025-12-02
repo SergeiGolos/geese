@@ -111,24 +111,39 @@ Pipe operations follow a similar inheritance pattern:
 User Home Directory (~/)
 └── .geese/                         # Global configuration directory
     ├── config.json                 # Global configuration
-    └── pipes/                      # Global custom pipes
-        ├── customPipe1.js
-        └── customPipe2.js
+    ├── pipes/                      # Global custom pipes
+    │   ├── customPipe1.js
+    │   └── customPipe2.js
+    └── *.geese                     # Global .geese recipe files (optional)
+        ├── code-review.geese
+        └── documentation.geese
 
 Project Directory (./project/)
 ├── .geese/                         # Local/project configuration
 │   ├── config.json                 # Local configuration (optional)
-│   └── pipes/                      # Local custom pipes (optional)
-│       ├── projectPipe1.js
-│       └── projectPipe2.js
+│   ├── pipes/                      # Local custom pipes (optional)
+│   │   ├── projectPipe1.js
+│   │   └── projectPipe2.js
+│   └── *.geese                     # Local .geese recipe files (recommended)
+│       ├── code-review.geese
+│       └── documentation.geese
 │
-├── recipes/                        # .geese recipe files
-│   ├── code-review.geese
-│   └── documentation.geese
+├── *.geese                         # Root-level .geese files (legacy/fallback)
+│   └── quick-review.geese
 │
 └── src/                            # Source files to process
     └── *.js
 ```
+
+### .geese File Discovery Order
+
+When running `geese`, files are discovered and processed in this order:
+
+1. **Global**: `~/.geese/*.geese` (user-wide templates, lowest priority)
+2. **Local**: `./.geese/*.geese` (project-specific, recommended location)
+3. **Root**: `./*.geese` (legacy/convenience, highest priority)
+
+**Note**: By default, `geese new` creates files in `./.geese/` to avoid polluting the project root directory. However, files in all three locations are discovered and available for processing.
 
 ## 🔧 Implementation Details
 
@@ -710,6 +725,134 @@ parseGeeseFile(filePath, baseConfig = {}) {
 }
 ```
 
+### 5. .geese File Discovery
+
+```javascript
+// src/geese-file-finder.js (New File)
+
+const fs = require('fs-extra');
+const path = require('path');
+const os = require('os');
+const glob = require('glob');
+
+class GeeseFileFinder {
+  /**
+   * Discover .geese files in hierarchical order
+   * @param {string} workingDir - Current working directory
+   * @returns {Array} Array of .geese file paths in priority order
+   */
+  async discoverGeeseFiles(workingDir) {
+    const files = [];
+    
+    // 1. Global .geese files (~/.geese/*.geese)
+    const globalGeeseDir = path.join(os.homedir(), '.geese');
+    if (await fs.pathExists(globalGeeseDir)) {
+      const globalFiles = await this.findGeeseInDirectory(globalGeeseDir);
+      files.push(...globalFiles.map(f => ({
+        path: f,
+        source: 'global',
+        priority: 1
+      })));
+    }
+    
+    // 2. Local .geese files (./.geese/*.geese)
+    const localGeeseDir = path.join(workingDir, '.geese');
+    if (await fs.pathExists(localGeeseDir)) {
+      const localFiles = await this.findGeeseInDirectory(localGeeseDir);
+      files.push(...localFiles.map(f => ({
+        path: f,
+        source: 'local',
+        priority: 2
+      })));
+    }
+    
+    // 3. Root .geese files (./*.geese)
+    const rootFiles = await this.findGeeseInDirectory(workingDir, false);
+    files.push(...rootFiles.map(f => ({
+      path: f,
+      source: 'root',
+      priority: 3
+    })));
+    
+    // Remove duplicates (same filename, keep highest priority)
+    const uniqueFiles = this.deduplicateByName(files);
+    
+    return uniqueFiles;
+  }
+
+  /**
+   * Find .geese files in a specific directory
+   * @param {string} dir - Directory to search
+   * @param {boolean} recursive - Search subdirectories (default: true)
+   * @returns {Array} Array of file paths
+   */
+  async findGeeseInDirectory(dir, recursive = true) {
+    const pattern = recursive 
+      ? path.join(dir, '**/*.geese')
+      : path.join(dir, '*.geese');
+    
+    return new Promise((resolve, reject) => {
+      glob(pattern, { 
+        ignore: ['**/node_modules/**', '**/dist/**'],
+        nodir: true 
+      }, (err, files) => {
+        if (err) reject(err);
+        else resolve(files);
+      });
+    });
+  }
+
+  /**
+   * Remove duplicate files by name, keeping highest priority
+   * @param {Array} files - Array of file objects with path, source, priority
+   * @returns {Array} Deduplicated array
+   */
+  deduplicateByName(files) {
+    const fileMap = new Map();
+    
+    for (const file of files) {
+      const basename = path.basename(file.path);
+      const existing = fileMap.get(basename);
+      
+      if (!existing || file.priority > existing.priority) {
+        fileMap.set(basename, file);
+      }
+    }
+    
+    return Array.from(fileMap.values())
+      .sort((a, b) => a.priority - b.priority)
+      .map(f => f.path);
+  }
+
+  /**
+   * Get the default output directory for new .geese files
+   * @param {string} workingDir - Current working directory
+   * @param {string} outputDir - Custom output directory (optional)
+   * @returns {string} Path to output directory
+   */
+  getDefaultOutputDir(workingDir, outputDir = null) {
+    if (outputDir) {
+      return path.resolve(workingDir, outputDir);
+    }
+    
+    // Default to .geese directory to avoid polluting root
+    return path.join(workingDir, '.geese');
+  }
+
+  /**
+   * Ensure .geese directory exists
+   * @param {string} workingDir - Working directory
+   */
+  async ensureGeeseDirectory(workingDir) {
+    const geeseDir = path.join(workingDir, '.geese');
+    await fs.ensureDir(geeseDir);
+    return geeseDir;
+  }
+}
+
+module.exports = new GeeseFileFinder();
+```
+
 ## 📊 Configuration Flow Diagram
 
 ### Complete Request Flow
@@ -718,6 +861,7 @@ parseGeeseFile(filePath, baseConfig = {}) {
 sequenceDiagram
     participant CLI as CLI Interface
     participant Parser as Argument Parser
+    participant Finder as GeeseFileFinder
     participant CM as ConfigManager
     participant GP as GeeseParser
     participant PO as PipeOperations
@@ -725,6 +869,12 @@ sequenceDiagram
     
     CLI->>Parser: Parse CLI arguments
     Parser->>CLI: Return parsed config
+    
+    CLI->>Finder: discoverGeeseFiles(workingDir)
+    Finder->>Finder: Search ~/.geese/*.geese
+    Finder->>Finder: Search ./.geese/*.geese
+    Finder->>Finder: Search ./*.geese
+    Finder->>CLI: Return prioritized file list
     
     CLI->>CM: loadHierarchicalConfig(workingDir, cliArgs)
     CM->>CM: Load core defaults
@@ -851,7 +1001,7 @@ When running with a `--debug-config` flag, users can see the complete configurat
 └─────────────────────────────────────────────────────────────┘
 
 Working Directory: /home/user/my-project
-.geese File: ./recipes/code-review.geese
+.geese File: ./.geese/code-review.geese
 
 ┌─────────────────────────────────────────────────────────────┐
 │  Property: goose.model                                       │
@@ -893,11 +1043,17 @@ Legend: [B] = Built-in, [G] = Global, [L] = Local
 ### New Command Options
 
 ```bash
+# Create a new .geese file (defaults to .geese/ directory)
+geese new code-review
+
+# Create a new .geese file in specific location
+geese new code-review -o ./
+
 # Show configuration hierarchy without running
 geese config inspect [directory]
 
 # Show effective configuration for a .geese file
-geese config show -f code-review.geese
+geese config show -f .geese/code-review.geese
 
 # Create local configuration
 geese config init-local [directory]
@@ -906,7 +1062,7 @@ geese config init-local [directory]
 geese pipe list --sources
 
 # Run with configuration override
-geese run -f review.geese --model gpt-4 --temperature 0.9
+geese run -f .geese/review.geese --model gpt-4 --temperature 0.9
 
 # Debug configuration resolution
 geese run --debug-config
@@ -927,8 +1083,18 @@ Configuration System:
   Each level overrides values from lower levels. Properties not
   specified at a level are inherited from the level below.
 
+.geese File Discovery:
+
+  Files are discovered in this order (last wins if same name):
+  1. Global: ~/.geese/*.geese
+  2. Local:  ./.geese/*.geese (recommended, created by default)
+  3. Root:   ./*.geese (legacy/convenience)
+
 Examples:
 
+  # Create a new .geese file (goes to .geese/ by default)
+  geese new code-review
+  
   # Use global config
   geese run
   
@@ -936,7 +1102,7 @@ Examples:
   geese run --model claude-3 --temperature 0.8
   
   # Show configuration without running
-  geese config show -f review.geese
+  geese config show -f .geese/review.geese
   
   # Initialize local project config
   geese config init-local
@@ -998,6 +1164,33 @@ describe('ConfigManager Hierarchy', () => {
   });
 });
 
+describe('GeeseFileFinder', () => {
+  it('should discover files in correct order', async () => {
+    const finder = require('./geese-file-finder');
+    const files = await finder.discoverGeeseFiles('/test/project');
+    
+    // Should have files from all three locations
+    expect(files.length).toBeGreaterThan(0);
+  });
+  
+  it('should deduplicate files by name, keeping highest priority', async () => {
+    // Setup: create same filename in multiple locations
+    const finder = require('./geese-file-finder');
+    const files = await finder.discoverGeeseFiles('/test/project');
+    
+    // Should only have one instance of each filename
+    const names = files.map(f => path.basename(f));
+    expect(names.length).toBe(new Set(names).size);
+  });
+  
+  it('should default new files to .geese directory', () => {
+    const finder = require('./geese-file-finder');
+    const outputDir = finder.getDefaultOutputDir('/test/project');
+    
+    expect(outputDir).toBe('/test/project/.geese');
+  });
+});
+
 describe('PipeOperations Hierarchy', () => {
   it('should load global pipes before local', async () => {
     const po = new PipeOperations();
@@ -1035,6 +1228,22 @@ describe('End-to-End Configuration', () => {
     // Run: process .geese file using the pipe
     // Verify: local version is executed
   });
+  
+  it('should discover .geese files in correct priority order', async () => {
+    // Setup: create same-named .geese file in all three locations
+    // Run: discover files
+    // Verify: root version takes priority over local over global
+  });
+  
+  it('should create new .geese files in .geese directory by default', async () => {
+    // Setup: run geese new command without -o flag
+    // Verify: file created in ./.geese/ directory
+  });
+  
+  it('should allow creating .geese files in custom location with -o flag', async () => {
+    // Setup: run geese new command with -o ./custom
+    // Verify: file created in ./custom/ directory
+  });
 });
 ```
 
@@ -1062,32 +1271,42 @@ describe('End-to-End Configuration', () => {
 - [ ] Add `deepMerge()` utility
 - [ ] Implement `getWithSource()` for debugging
 
-### Phase 2: Pipe Operations Enhancement
+### Phase 2: File Discovery
+- [ ] Create `GeeseFileFinder` class
+- [ ] Implement `discoverGeeseFiles()` for hierarchical discovery
+- [ ] Add `getDefaultOutputDir()` to default to `.geese/` directory
+- [ ] Implement `ensureGeeseDirectory()` helper
+- [ ] Update `geese new` command to use `.geese/` as default
+
+### Phase 3: Pipe Operations Enhancement
 - [ ] Add `initializeHierarchy()` to `PipeOperations`
 - [ ] Implement `loadCustomPipesFromDirectory()`
 - [ ] Add source tracking for operations
 - [ ] Add `listWithSources()` method
 
-### Phase 3: CLI Integration
+### Phase 4: CLI Integration
 - [ ] Create `CLIArgumentParser` class
 - [ ] Add CLI argument parsing to config
 - [ ] Update `bin/geese.js` to use hierarchy
 - [ ] Add `--debug-config` flag
 
-### Phase 4: Commands
+### Phase 5: Commands
 - [ ] Add `config inspect` command
 - [ ] Add `config show` command
 - [ ] Add `config init-local` command
 - [ ] Update `pipe list` with source info
+- [ ] Update `geese new` to accept `-o` flag for custom output
 
-### Phase 5: Testing
+### Phase 6: Testing
 - [ ] Unit tests for `ConfigManager`
+- [ ] Unit tests for `GeeseFileFinder`
 - [ ] Unit tests for `PipeOperations`
 - [ ] Unit tests for `CLIArgumentParser`
+- [ ] Integration tests for file discovery order
 - [ ] Integration tests for full hierarchy
 - [ ] Manual testing with real projects
 
-### Phase 6: Documentation
+### Phase 7: Documentation
 - [ ] Update README.md
 - [ ] Create CONFIGURATION.md
 - [ ] Update PIPE_OPERATIONS.md
@@ -1095,7 +1314,7 @@ describe('End-to-End Configuration', () => {
 - [ ] Add inline code documentation
 - [ ] Create example configurations
 
-### Phase 7: Polish
+### Phase 8: Polish
 - [ ] Add configuration validation
 - [ ] Add helpful error messages
 - [ ] Create visual config inspector
