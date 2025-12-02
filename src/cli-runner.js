@@ -7,7 +7,11 @@ const { spawn } = require('child_process');
 class CLIRunner {
   constructor() {
     if (this.constructor === CLIRunner) {
-      throw new Error(`CLIRunner is an abstract class and cannot be instantiated directly. Please extend this class and implement the required methods.`);
+      throw new Error(
+        `CLIRunner is an abstract class and cannot be instantiated directly. ` +
+        `Please extend this class and implement the required methods: ` +
+        `getDefaultPath(), getFrontmatterSchema(), getDefaultFrontmatter(), getDefaultTemplate(), and optionally buildArgs().`
+      );
     }
     this.defaultPath = this.getDefaultPath();
   }

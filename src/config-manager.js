@@ -101,7 +101,7 @@ class ConfigManager {
     }
     
     // Build the nested structure safely
-    // Note: All keys have been validated above, so traversal is safe
+    // Note: All keys have been validated above (lines 97-101), so traversal is safe
     let current = config;
     
     for (let i = 0; i < keys.length - 1; i++) {
