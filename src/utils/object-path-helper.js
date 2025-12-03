@@ -13,6 +13,16 @@ class ObjectPathHelper {
   static DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
   
   /**
+   * Check if a key is safe (not a dangerous key)
+   * @param {string} key - Key to check
+   * @returns {boolean} True if key is safe
+   * @private
+   */
+  static _isSafeKey(key) {
+    return !this.DANGEROUS_KEYS.includes(key);
+  }
+  
+  /**
    * Validate a path string and split it into keys
    * @param {string} path - Dot-notation path (e.g., 'goose.model')
    * @returns {string[]} Array of validated keys
@@ -26,7 +36,7 @@ class ObjectPathHelper {
     const keys = path.split('.');
     
     for (const key of keys) {
-      if (this.DANGEROUS_KEYS.includes(key)) {
+      if (!this._isSafeKey(key)) {
         throw new Error(
           `Invalid configuration key: ${path}. Keys cannot contain '__proto__', 'constructor', or 'prototype'.`
         );
@@ -128,6 +138,41 @@ class ObjectPathHelper {
     }
     
     return false;
+  }
+  
+  /**
+   * List all keys in an object (including nested keys with dot notation)
+   * @param {Object} obj - Source object
+   * @param {string} prefix - Internal use for recursion, prefix for nested keys
+   * @returns {string[]} Array of all keys in dot notation
+   */
+  static listKeys(obj, prefix = '') {
+    const keys = [];
+    
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+      return keys;
+    }
+    
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        // Skip dangerous keys using the same check as validatePath
+        if (!this._isSafeKey(key)) {
+          continue;
+        }
+        
+        const fullKey = prefix ? `${prefix}.${key}` : key;
+        keys.push(fullKey);
+        
+        // Recursively list nested object keys
+        const value = obj[key];
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          const nestedKeys = this.listKeys(value, fullKey);
+          keys.push(...nestedKeys);
+        }
+      }
+    }
+    
+    return keys;
   }
 }
 

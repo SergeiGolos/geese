@@ -2,8 +2,9 @@ const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
 const { glob } = require('glob');
+const IFileFinder = require('./interfaces/file-finder');
 
-class GeeseFileFinder {
+class GeeseFileFinder extends IFileFinder {
   /**
    * Discover .geese files in hierarchical order
    * @param {string} workingDir - Current working directory
