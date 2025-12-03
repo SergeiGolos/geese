@@ -1,18 +1,18 @@
 ---
-# System properties use $ prefix
-$include:
+# System properties use _ prefix to identify them
+_include:
   - "src/**/*.js"
   - "src/**/*.jsx"
   - "src/**/*.ts"
   - "src/**/*.tsx"
-$exclude:
+_exclude:
   - "*.test.js"
   - "*.spec.js"
   - "node_modules/**"
   - "dist/**"
-$recipe: "refactoring"
-$temperature: 0.2
-$max_tokens: 2500
+_recipe: "refactoring"
+_temperature: 0.2
+_max_tokens: 2500
 
 # User properties
 project_name: "Legacy System"

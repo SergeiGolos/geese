@@ -1,13 +1,13 @@
 ---
-# System properties use $ prefix for visual distinction
-$include:
+# System properties use _ prefix to identify them
+_include:
   - "src/**/*.js"
   - "src/**/*.jsx"
-$exclude:
+_exclude:
   - "*.test.js"
   - "node_modules/**"
-$recipe: "code-review"
-$temperature: 0.3
+_recipe: "code-review"
+_temperature: 0.3
 
 # User properties support pipe operations
 # No outer quotes needed - the parser auto-quotes pipe expressions!
