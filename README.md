@@ -7,11 +7,12 @@ Geese is a powerful CLI tool that processes `.geese` files to apply AI-powered t
 - **Hierarchical Configuration**: 4-level configuration system (core → global → local → CLI)
 - **Hierarchical File Discovery**: Discover .geese files from global, local, and root directories
 - **Pipe Operations Inheritance**: Custom pipes at global and local levels with override support
+- **Custom Tool Runners**: Create integrations for any CLI AI tool (Aider, Claude, etc.)
 - **Template-based Processing**: Use Handlebars templates to create dynamic prompts
 - **File Pattern Matching**: Include/exclude files with glob patterns
 - **Interactive Selection**: Choose which files to process with an intuitive CLI interface
 - **Comprehensive Logging**: Automatic markdown reports with detailed session information
-- **Configurable AI Integration**: Works with Goose AI assistant
+- **Configurable AI Integration**: Works with Goose AI assistant by default
 - **Dry Run Mode**: Preview what would be processed without executing
 - **Configuration Management**: Multi-level configuration with easy inspection and debugging
 - **Multiple Tools Support**: Extensible architecture for different AI CLI tools
@@ -342,12 +343,13 @@ module.exports = function myOperation(value, args, context) {
 
 ## 🛠️ Usage
 
-Geese provides four main commands:
+Geese provides five main commands:
 
 - **run** - Process .geese files (default command)
 - **new** - Create a new .geese file
 - **config** - Manage configuration settings
 - **pipe** - Manage custom pipe operations
+- **runner** - Manage custom tool runners
 
 ### Running Geese (Process Files)
 
@@ -511,6 +513,105 @@ Examples:
   geese pipe remove myPipe
   geese pipe help
 ```
+
+#### Runner Command
+```
+Usage: geese runner <action> [name] [options]
+
+Actions:
+  list                 List all available tool runners
+  new <name>           Create a new custom runner
+  remove <name>        Remove a custom runner
+  help                 Show detailed runner help
+
+Options:
+  -d, --description <text>  Description for new runner
+  -f, --force              Overwrite existing runner without confirmation
+  --local                  Create/remove in local .geese directory
+  -s, --sources            Show runner sources (for list action)
+  -h, --help               Display help for command
+
+Examples:
+  geese runner list
+  geese runner list --sources
+  geese runner new aider -d "Aider AI coding assistant"
+  geese runner new myTool --local
+  geese runner remove aider
+```
+
+## 🔧 Custom Tool Runners
+
+Geese supports custom tool runners that allow you to integrate any CLI AI tool with the Geese workflow. Custom runners follow the same pattern as the built-in Goose runner.
+
+### Runner Hierarchy
+
+1. **Built-in**: Core runners (goose)
+2. **Global**: `~/.geese/runners/` - User-wide custom runners
+3. **Local**: `./.geese/runners/` - Project-specific runners (highest priority)
+
+### Managing Custom Runners
+
+```bash
+# List all available runners
+geese runner list
+
+# List runners with source information
+geese runner list --sources
+
+# Create a new custom runner
+geese runner new aider -d "Aider AI coding assistant"
+
+# Create a local project-specific runner
+geese runner new myTool --local
+
+# Remove a custom runner
+geese runner remove aider
+```
+
+### Example Custom Runner: Aider
+
+Create an Aider runner:
+
+```bash
+geese runner new aider -d "Aider AI coding assistant"
+```
+
+This creates:
+- `~/.geese/runners/aider/AiderProvider.js` - Command structure and configuration
+- `~/.geese/runners/aider/AiderRunner.js` - Execution wrapper
+- `~/.geese/runners/aider/index.js` - Entry point
+
+Edit `AiderProvider.js` to customize for your tool:
+
+```javascript
+class AiderProvider extends IAIToolProvider {
+  getDefaultPath() {
+    return 'aider'; // CLI command
+  }
+
+  buildArgs(config) {
+    const args = [];
+    if (config.model) args.push('--model', config.model);
+    if (config.edit_format) args.push('--edit-format', config.edit_format);
+    // Add more tool-specific arguments
+    return args;
+  }
+  
+  // ... other methods
+}
+```
+
+Then use it:
+
+```bash
+# Create a .geese file using the aider runner
+geese new code-fix --tool aider
+
+# Process files with aider
+geese run
+```
+
+For detailed documentation on creating custom runners, see [Custom Tool Runners Guide](docs/CUSTOM_TOOL_RUNNERS.md).
 
 ### Interactive File Selection
 

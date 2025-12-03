@@ -143,6 +143,9 @@ async function runCommand(container, directory, options) {
   const pipesDir = path.join(homeDir, '.geese', 'pipes');
   parser.loadCustomPipes(pipesDir);
   
+  // Initialize tool registry with hierarchical loading
+  await toolRegistry.initializeHierarchy(workingDir);
+  
   // Determine tool and get runner
   const tool = config.defaultTool || 'goose';
   const toolRunner = toolRegistry.getRunner(tool);
