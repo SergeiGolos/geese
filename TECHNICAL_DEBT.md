@@ -288,7 +288,7 @@ The main CLI file contains:
 - Multiple commands mixed in one file
 - Each function has 50-200+ lines
 - Hard to test individual commands
-- High cyclomatic complexity (107 conditional statements including if/else/for/while/switch/ternary/logical operators counted by grep analysis)
+- High cyclomatic complexity (107 conditional statements including if/else/for/while/switch/ternary/logical operators counted by: `grep -E "(if |else |for |while |switch |case |catch |\?\s|\|\||\&\&)" bin/geese.js | wc -l`)
 
 **Impact:** High - Maintenance nightmare, poor testability
 
@@ -1618,7 +1618,8 @@ Exported singleton instances...
 |--------|---------|--------|----------|
 | Average Lines per File | 258 | <200 | High |
 | Average Methods per Class | 22 | <15 | High |
-| Cyclomatic Complexity (avg) | 12 | <8 | Medium |
+| Cyclomatic Complexity (bin/geese.js) | 107 | <30 | High |
+| Cyclomatic Complexity (avg other files) | 60 | <20 | Medium |
 | Test Coverage | 0% | >80% | Critical |
 | Duplicate Code | ~15% | <5% | Medium |
 | Singleton Exports | 3 | 0 | High |
