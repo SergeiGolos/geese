@@ -1,9 +1,11 @@
 const fs = require('fs-extra');
 const path = require('path');
 const chalk = require('chalk').default || require('chalk');
+const IReportGenerator = require('./interfaces/report-generator');
 
-class ReportGenerator {
+class ReportGenerator extends IReportGenerator {
   constructor(outputDir = './logs') {
+    super();
     this.outputDir = outputDir;
     this.ensureOutputDir();
   }

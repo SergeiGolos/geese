@@ -129,6 +129,41 @@ class ObjectPathHelper {
     
     return false;
   }
+  
+  /**
+   * List all keys in an object (including nested keys with dot notation)
+   * @param {Object} obj - Source object
+   * @param {string} prefix - Internal use for recursion, prefix for nested keys
+   * @returns {string[]} Array of all keys in dot notation
+   */
+  static listKeys(obj, prefix = '') {
+    const keys = [];
+    
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+      return keys;
+    }
+    
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        // Skip dangerous keys
+        if (this.DANGEROUS_KEYS.includes(key)) {
+          continue;
+        }
+        
+        const fullKey = prefix ? `${prefix}.${key}` : key;
+        keys.push(fullKey);
+        
+        // Recursively list nested object keys
+        const value = obj[key];
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          const nestedKeys = this.listKeys(value, fullKey);
+          keys.push(...nestedKeys);
+        }
+      }
+    }
+    
+    return keys;
+  }
 }
 
 module.exports = ObjectPathHelper;

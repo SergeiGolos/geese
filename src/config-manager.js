@@ -3,9 +3,11 @@ const path = require('path');
 const os = require('os');
 const ObjectPathHelper = require('./utils/object-path-helper');
 const DirectoryWalker = require('./utils/directory-walker');
+const IConfigProvider = require('./interfaces/config-provider');
 
-class ConfigManager {
+class ConfigManager extends IConfigProvider {
   constructor() {
+    super();
     this.globalConfigDir = path.join(os.homedir(), '.geese');
     this.globalConfigFile = path.join(this.globalConfigDir, 'config.json');
     // Maintain backward compatibility
@@ -87,6 +89,15 @@ class ConfigManager {
     const config = await this.loadConfig();
     ObjectPathHelper.deleteNestedValue(config, key);
     await this.saveConfig(config);
+  }
+
+  /**
+   * List all configuration keys
+   * @returns {Promise<string[]>} Array of configuration keys
+   */
+  async list() {
+    const config = await this.loadConfig();
+    return ObjectPathHelper.listKeys(config);
   }
 
   /**
