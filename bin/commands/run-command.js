@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
 const inquirer = require('inquirer').default || require('inquirer');
 const CLIArgumentParser = require('../../src/cli-argument-parser');
+const UIManager = require('../../src/ui-manager');
 
 /**
  * Get human-readable file size
@@ -30,12 +31,18 @@ function getFileSize(filePath) {
  * @param {Object} geeseData - Parsed .geese file data
  * @param {string} targetFile - Target file path
  * @param {boolean} dryRun - Whether to run in dry-run mode
+ * @param {UIManager} uiManager - UI manager instance (optional)
+ * @param {number} fileIndex - Index of file in processing queue (optional)
  * @returns {Promise<Object|null>} Session object or null
  */
-async function processTargetFile(parser, toolRunner, reportGenerator, geeseData, targetFile, dryRun = false) {
+async function processTargetFile(parser, toolRunner, reportGenerator, geeseData, targetFile, dryRun, uiManager, fileIndex) {
   const startTime = Date.now();
   
   reportGenerator.logSessionStart(geeseData.filePath, targetFile);
+  
+  uiManager.clearOutput();
+  uiManager.showOutput();
+  uiManager.logOutput(`Processing: ${path.basename(targetFile)}`, 'info');
   
   try {
     // Prepare context
@@ -44,9 +51,30 @@ async function processTargetFile(parser, toolRunner, reportGenerator, geeseData,
     // Generate prompt
     const prompt = parser.renderTemplate(geeseData.template, context);
     
+    uiManager.logOutput('Context prepared', 'success');
+    uiManager.logOutput('Executing AI tool...', 'info');
+    
     // Execute tool (runner handles dry-run internally)
-    const result = await toolRunner.processFile(targetFile, prompt, context._gooseConfig);
+    const executionOptions = {
+      onStdout: (data) => {
+        uiManager.logOutput(data, 'info');
+      },
+      onStderr: (data) => {
+        uiManager.logOutput(data, 'warning');
+      }
+    };
+    
+    const result = await toolRunner.processFile(targetFile, prompt, context._gooseConfig, executionOptions);
     const endTime = Date.now();
+    
+    uiManager.logOutput(`Processing completed in ${endTime - startTime}ms`, 'success');
+    if (result.output) {
+      const outputLines = result.output.split('\n').slice(0, 5);
+      outputLines.forEach(line => uiManager.logOutput(line, 'info'));
+      if (result.output.split('\n').length > 5) {
+        uiManager.logOutput('... (output truncated)', 'info');
+      }
+    }
     
     // Create session entry
     const session = reportGenerator.createSessionEntry(
@@ -68,11 +96,19 @@ async function processTargetFile(parser, toolRunner, reportGenerator, geeseData,
       result.success
     );
     
+    // Update UI with completion
+    if (fileIndex >= 0) {
+      uiManager.updateFileRow(fileIndex, session.tokens?.totalTokens || 0, result.success);
+    }
+    uiManager.addSession(session);
+    uiManager.hideOutput();
+    
     return session;
     
   } catch (error) {
     const endTime = Date.now();
-    console.error(chalk.red(`    ❌ Error: ${error.message}`));
+    
+    uiManager.logOutput(`Error: ${error.message}`, 'error');
     
     const session = reportGenerator.createSessionEntry(
       geeseData.filePath,
@@ -92,6 +128,13 @@ async function processTargetFile(parser, toolRunner, reportGenerator, geeseData,
       endTime - startTime,
       false
     );
+    
+    // Update UI with failure
+    if (fileIndex >= 0) {
+      uiManager.updateFileRow(fileIndex, 0, false);
+    }
+    uiManager.addSession(session);
+    uiManager.hideOutput();
     
     return session;
   }
@@ -253,12 +296,10 @@ async function runCommand(container, directory, options) {
     return;
   }
   
-  // Process each .geese file
-  const allSessions = [];
+  // First pass: collect all geese files and target files
+  const processingQueue = [];
   
   for (const geeseFile of geeseFiles) {
-    console.log(chalk.blue(`\n📖 Processing: ${path.basename(geeseFile)}`));
-    
     try {
       // Parse .geese file with base configuration from hierarchy
       const baseConfig = hierarchicalConfig.config[tool] || {};
@@ -273,11 +314,8 @@ async function runCommand(container, directory, options) {
       );
       
       if (targetFiles.length === 0) {
-        console.log(chalk.yellow('  ⚠️  No target files found'));
         continue;
       }
-      
-      console.log(chalk.green(`  📁 Found ${targetFiles.length} target file(s)`));
       
       // Show target file selection
       let selectedTargets = targetFiles;
@@ -300,27 +338,12 @@ async function runCommand(container, directory, options) {
       }
       
       if (selectedTargets.length === 0) {
-        console.log(chalk.yellow('  No target files selected'));
         continue;
       }
       
-      // Process selected target files
+      // Add to processing queue
       for (const targetFile of selectedTargets) {
-        const relativePath = path.relative(path.dirname(geeseFile), targetFile);
-        console.log(chalk.cyan(`  🔄 Processing: ${relativePath}`));
-        
-        const session = await processTargetFile(
-          parser,
-          toolRunner,
-          reportGenerator,
-          geeseData,
-          targetFile,
-          options.dryRun
-        );
-        
-        if (session) {
-          allSessions.push(session);
-        }
+        processingQueue.push({ geeseFile, geeseData, targetFile });
       }
       
     } catch (error) {
@@ -328,14 +351,63 @@ async function runCommand(container, directory, options) {
     }
   }
   
-  // Generate final report
+  if (processingQueue.length === 0) {
+    console.log(chalk.yellow('No files to process.'));
+    return;
+  }
+  
+  // Initialize UI
+  const uiManager = new UIManager();
+  uiManager.initialize();
+  
+  // Set system parameters from first geese file
+  const firstGeeseData = processingQueue[0].geeseData;
+  const systemParams = {};
+  for (const [key, value] of Object.entries(firstGeeseData.frontmatter)) {
+    if (key.startsWith('_')) {
+      systemParams[key.substring(1)] = value;
+    }
+  }
+  systemParams['tool'] = tool;
+  systemParams['working_dir'] = workingDir;
+  uiManager.setSystemParameters(systemParams);
+  
+  // Add all files to the table
+  processingQueue.forEach(({ targetFile }) => {
+    uiManager.addFileRow(
+      path.basename(targetFile),
+      uiManager.getFileSize(targetFile),
+      uiManager.getFileUpdatedTime(targetFile)
+    );
+  });
+  
+  // Process files
+  const allSessions = [];
+  
+  for (let i = 0; i < processingQueue.length; i++) {
+    const { geeseFile, geeseData, targetFile } = processingQueue[i];
+    
+    const session = await processTargetFile(
+      parser,
+      toolRunner,
+      reportGenerator,
+      geeseData,
+      targetFile,
+      options.dryRun,
+      uiManager,
+      i
+    );
+    
+    if (session) {
+      allSessions.push(session);
+    }
+  }
+  
+  // Show final UI summary
   if (allSessions.length > 0) {
-    console.log(chalk.blue('\n📊 Generating report...'));
-    const report = await reportGenerator.saveReport(allSessions);
-    console.log(chalk.green(`✅ Complete! Processed ${allSessions.length} session(s)`));
-    console.log(chalk.gray(`   Report: ${report}`));
+    uiManager.showSummary();
   } else {
-    console.log(chalk.yellow('\n⚠️  No sessions were processed'));
+    uiManager.destroy();
   }
 }
 

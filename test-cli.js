@@ -32,7 +32,7 @@ function test(description, fn) {
 }
 
 function exec(command) {
-  return execSync(command, { encoding: 'utf8', stdio: 'pipe' });
+  return execSync(command, { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, GEESE_NO_TUI: '1' } });
 }
 
 function cleanup() {

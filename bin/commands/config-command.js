@@ -50,44 +50,47 @@ async function configCommand(container, options) {
   }
 
   if (options.inspect !== undefined) {
+    const SimpleUI = require('../../src/simple-ui');
     const workingDir = typeof options.inspect === 'string' ? options.inspect : process.cwd();
     const hierarchicalConfig = await configManager.loadHierarchicalConfig(workingDir);
     
-    console.log(chalk.blue('📊 Configuration Hierarchy'));
-    console.log(chalk.gray(`Working Directory: ${workingDir}\n`));
+    // Build content for display
+    let content = `{gray-fg}Working Directory: ${workingDir}{/gray-fg}\n\n`;
     
     // Show sources
-    console.log(chalk.cyan('Configuration Sources:'));
-    console.log(chalk.gray('  0. Core Defaults (built-in)'));
-    console.log(chalk.gray(`  1. Global: ${configManager.globalConfigFile}`));
+    content += '{cyan-fg}Configuration Sources:{/cyan-fg}\n';
+    content += '  0. Core Defaults (built-in)\n';
+    content += `  1. Global: ${configManager.globalConfigFile}\n`;
     const localConfigDir = configManager.getLocalConfigDir(workingDir);
     if (localConfigDir) {
-      console.log(chalk.gray(`  2. Local: ${path.join(localConfigDir, 'config.json')}`));
+      content += `  2. Local: ${path.join(localConfigDir, 'config.json')}\n`;
     } else {
-      console.log(chalk.gray('  2. Local: (not configured)'));
+      content += '  2. Local: (not configured)\n';
     }
-    console.log(chalk.gray('  3. .geese File: (varies per file)'));
-    console.log(chalk.gray('  4. CLI Arguments: (runtime overrides)\n'));
+    content += '  3. .geese File: (varies per file)\n';
+    content += '  4. CLI Arguments: (runtime overrides)\n\n';
     
     // Show merged config
-    console.log(chalk.cyan('Effective Configuration:'));
-    console.log(JSON.stringify(hierarchicalConfig.config, null, 2));
+    content += '{cyan-fg}Effective Configuration:{/cyan-fg}\n';
+    content += JSON.stringify(hierarchicalConfig.config, null, 2);
+    
+    await SimpleUI.showBox('📊 Configuration Hierarchy', content);
     return;
   }
 
   if (options.show) {
+    const SimpleUI = require('../../src/simple-ui');
     const workingDir = process.cwd();
     const hierarchicalConfig = await configManager.loadHierarchicalConfig(workingDir);
     
-    console.log(chalk.blue('Effective Configuration:'));
-    console.log(JSON.stringify(hierarchicalConfig.config, null, 2));
+    await SimpleUI.showConfig('Effective Configuration', hierarchicalConfig.config);
     return;
   }
 
   if (options.list) {
+    const SimpleUI = require('../../src/simple-ui');
     const config = await configManager.loadConfig();
-    console.log(chalk.blue('Current configuration:'));
-    console.log(JSON.stringify(config, null, 2));
+    await SimpleUI.showConfig('Current Configuration', config);
     return;
   }
 
@@ -129,19 +132,23 @@ async function configCommand(container, options) {
     return;
   }
 
-  // No options provided, show current config
+  // No options provided, show current config with usage info
+  const SimpleUI = require('../../src/simple-ui');
   const config = await configManager.loadConfig();
-  console.log(chalk.blue('Current configuration:'));
-  console.log(JSON.stringify(config, null, 2));
-  console.log(chalk.gray(`\nConfig file: ${configManager.getConfigPath()}`));
-  console.log(chalk.gray('\nUsage:'));
-  console.log(chalk.gray('  geese config --list'));
-  console.log(chalk.gray('  geese config --get <key>'));
-  console.log(chalk.gray('  geese config --set <key> <value>'));
-  console.log(chalk.gray('  geese config --delete <key>'));
-  console.log(chalk.gray('  geese config --inspect [directory]'));
-  console.log(chalk.gray('  geese config --show'));
-  console.log(chalk.gray('  geese config --init-local'));
+  
+  let content = '{cyan-fg}Configuration:{/cyan-fg}\n';
+  content += JSON.stringify(config, null, 2);
+  content += `\n\n{gray-fg}Config file: ${configManager.getConfigPath()}{/gray-fg}`;
+  content += '\n\n{cyan-fg}Usage:{/cyan-fg}\n';
+  content += '  geese config --list\n';
+  content += '  geese config --get <key>\n';
+  content += '  geese config --set <key> <value>\n';
+  content += '  geese config --delete <key>\n';
+  content += '  geese config --inspect [directory]\n';
+  content += '  geese config --show\n';
+  content += '  geese config --init-local';
+  
+  await SimpleUI.showBox('Current Configuration', content);
 }
 
 module.exports = configCommand;

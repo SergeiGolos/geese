@@ -429,6 +429,29 @@ geese run -g /path/to/goose
 geese run --dry-run
 ```
 
+### Terminal UI
+
+Geese provides a Terminal User Interface (TUI) that displays a cleaner, more organized view of the processing workflow.
+
+The TUI includes:
+
+- **System Parameters Box**: Displays all configuration parameters at the top
+- **File Processing Table**: Shows real-time progress with columns for:
+  - File name
+  - File size
+  - Last updated time
+  - Tokens used
+  - Status icon (⏳ processing, ✅ success, ❌ failed)
+- **Scrolling Output Panel**: Shows real-time command output (2/5 of screen height)
+- **Summary Card**: Displays final statistics including:
+  - Number of files processed
+  - Total and average processing time
+  - Total and average tokens used
+
+The UI automatically adapts to terminal size and provides a cleaner experience for monitoring multi-file processing sessions.
+
+```
+
 ### Creating New .geese Files
 
 ```bash

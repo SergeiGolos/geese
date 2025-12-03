@@ -149,7 +149,7 @@ const runCommandDefinition = program
   .option('-f, --file <file>', 'Process a specific .geese file')
   .option('-o, --output <dir>', 'Output directory for logs (default: "./logs")')
   .option('-g, --goose-path <path>', 'Path to goose executable')
-  .option('--dry-run', 'Show what would be processed without executing (console output)')
+  .option('--dry-run', 'Show what would be processed without executing')
   .option('--dry-run-file <file>', 'Dry-run and write command details to file')
   .option('--debug-config', 'Show configuration hierarchy debug information')
   .action(async (directory, options) => {

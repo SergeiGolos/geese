@@ -107,10 +107,10 @@ class RunnerCLI {
    * @param {boolean} showSources - Whether to show runner sources
    */
   static async listRunners(container, showSources = false) {
+    const SimpleUI = require('./simple-ui');
     const toolRegistry = container.get('toolRegistry');
     
-    console.log(chalk.bold('\n🔧 Available Tool Runners\n'));
-
+    let content = '';
     const allRunners = toolRegistry.getToolNames();
     const builtinRunners = ['goose']; // Default built-in
     
@@ -134,34 +134,35 @@ class RunnerCLI {
           .filter(f => !builtinRunners.includes(f));
       }
       
-      // Display by source
+      // Build content by source
       if (builtinRunners.length > 0) {
-        console.log(chalk.cyan('Built-in Runners:'));
-        this.displayRunnersList(builtinRunners);
+        content += '{cyan-fg}Built-in Runners:{/cyan-fg}\n';
+        content += this.formatRunnersList(builtinRunners);
       }
       
       if (globalCustom.length > 0) {
-        console.log();
-        console.log(chalk.cyan('Global Custom Runners:'));
-        console.log(chalk.gray(`  Location: ${globalRunnersDir}`));
-        this.displayRunnersList(globalCustom);
+        if (content) content += '\n';
+        content += '{cyan-fg}Global Custom Runners:{/cyan-fg}\n';
+        content += `{gray-fg}Location: ${globalRunnersDir}{/gray-fg}\n`;
+        content += this.formatRunnersList(globalCustom);
       }
       
       if (localCustom.length > 0) {
-        console.log();
-        console.log(chalk.cyan('Local Custom Runners:'));
-        console.log(chalk.gray(`  Location: ${localRunnersDir}`));
-        this.displayRunnersList(localCustom);
+        if (content) content += '\n';
+        content += '{cyan-fg}Local Custom Runners:{/cyan-fg}\n';
+        content += `{gray-fg}Location: ${localRunnersDir}{/gray-fg}\n`;
+        content += this.formatRunnersList(localCustom);
       }
     } else {
       // Simple listing
-      console.log(chalk.cyan('Registered Runners:'));
-      this.displayRunnersList(allRunners);
+      content += '{cyan-fg}Registered Runners:{/cyan-fg}\n';
+      content += this.formatRunnersList(allRunners);
     }
 
-    console.log();
-    console.log(chalk.gray('Use "geese runner new <name>" to create a custom runner.'));
-    console.log(chalk.gray('Use "geese runner list --sources" to see runner sources.'));
+    content += '\n{gray-fg}Use "geese runner new <name>" to create a custom runner.{/gray-fg}\n';
+    content += '{gray-fg}Use "geese runner list --sources" to see runner sources.{/gray-fg}';
+    
+    await SimpleUI.showBox('🔧 Available Tool Runners', content);
   }
 
   /**
@@ -176,6 +177,24 @@ class RunnerCLI {
       const row = sorted.slice(i, i + columns);
       console.log('  ' + row.map(op => chalk.green(op.padEnd(20))).join(''));
     }
+  }
+
+  /**
+   * Format a list of runners for TUI display
+   * @param {string[]} runners - Array of runner names
+   * @returns {string} Formatted string
+   */
+  static formatRunnersList(runners) {
+    const columns = 4;
+    const sorted = runners.sort();
+    let result = '';
+    
+    for (let i = 0; i < sorted.length; i += columns) {
+      const row = sorted.slice(i, i + columns);
+      result += '  ' + row.map(op => `{green-fg}${op.padEnd(20)}{/green-fg}`).join('') + '\n';
+    }
+    
+    return result;
   }
 
   /**

@@ -66,25 +66,28 @@ class ToolExecutor {
    * Execute the CLI tool with the provided prompt and configuration
    * @param {string} prompt - The prompt to send to the tool
    * @param {Object} config - Tool configuration options
+   * @param {Object} [options] - Execution options
+   * @param {Function} [options.onStdout] - Callback for stdout data
+   * @param {Function} [options.onStderr] - Callback for stderr data
    * @returns {Promise<Object>} Response with output and metadata
    */
-  async execute(prompt, config = {}) {
+  async execute(prompt, config = {}, options = {}) {
     const executablePath = this.customPath || this.provider.getDefaultPath();
     const args = this.provider.buildArgs(config);
     
     // Pass prompt via stdin (using -i - flag)
     const result = await this.runner.execute(executablePath, args, prompt, {
       realTime: true,
-      onStdout: (data) => {
+      onStdout: options.onStdout || ((data) => {
         if (process.stdout.isTTY) {
           process.stdout.write(data);
         }
-      },
-      onStderr: (data) => {
+      }),
+      onStderr: options.onStderr || ((data) => {
         if (process.stderr.isTTY) {
           process.stderr.write(data);
         }
-      }
+      })
     });
     
     return {
@@ -101,11 +104,14 @@ class ToolExecutor {
    * @param {string} targetFile - Path to target file
    * @param {string} prompt - The generated prompt
    * @param {Object} config - Tool configuration
+   * @param {Object} [options] - Execution options
+   * @param {Function} [options.onStdout] - Callback for stdout data
+   * @param {Function} [options.onStderr] - Callback for stderr data
    * @returns {Promise<Object>} Response with output and metadata
    */
-  async processFile(targetFile, prompt, config) {
+  async processFile(targetFile, prompt, config, options = {}) {
     try {
-      const result = await this.execute(prompt, config);
+      const result = await this.execute(prompt, config, options);
       
       return {
         ...result,

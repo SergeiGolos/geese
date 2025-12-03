@@ -72,10 +72,11 @@ class GooseRunner extends CLIRunner {
    * @param {string} targetFile - Path to target file
    * @param {string} prompt - The generated prompt
    * @param {Object} config - Tool configuration
+   * @param {Object} [options] - Execution options
    * @returns {Promise<Object>} Response with output and metadata
    */
-  async processFile(targetFile, prompt, config) {
-    return this._executor.processFile(targetFile, prompt, config);
+  async processFile(targetFile, prompt, config, options) {
+    return this._executor.processFile(targetFile, prompt, config, options);
   }
 
   /**
