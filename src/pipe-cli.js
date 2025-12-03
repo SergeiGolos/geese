@@ -86,9 +86,10 @@ class PipeCLI {
    * @param {boolean} showSources - Whether to show operation sources
    */
   static async listPipes(container, showSources = false) {
+    const SimpleUI = require('./simple-ui');
     const pipeOps = container.get('pipeOperations');
     
-    console.log(chalk.bold('\n📦 Available Pipe Operations\n'));
+    let content = '';
 
     if (showSources) {
       // Show with source information
@@ -107,28 +108,28 @@ class PipeCLI {
         }
       }
       
-      // Display by source
+      // Build content by source
       if (bySource.builtin.length > 0) {
-        console.log(chalk.cyan('Built-in Operations:'));
-        this.displayOperationsList(bySource.builtin);
+        content += '{cyan-fg}Built-in Operations:{/cyan-fg}\n';
+        content += this.formatOperationsList(bySource.builtin);
       }
       
       if (bySource.global.length > 0) {
-        console.log();
-        console.log(chalk.cyan('Global Custom Operations:'));
+        if (content) content += '\n';
+        content += '{cyan-fg}Global Custom Operations:{/cyan-fg}\n';
         const globalPipesDir = path.join(require('os').homedir(), '.geese', 'pipes');
-        console.log(chalk.gray(`  Location: ${globalPipesDir}`));
-        this.displayOperationsList(bySource.global);
+        content += `{gray-fg}Location: ${globalPipesDir}{/gray-fg}\n`;
+        content += this.formatOperationsList(bySource.global);
       }
       
       if (bySource.local.length > 0) {
-        console.log();
-        console.log(chalk.cyan('Local Custom Operations:'));
-        console.log(chalk.gray(`  Location: ./.geese/pipes/`));
-        this.displayOperationsList(bySource.local);
+        if (content) content += '\n';
+        content += '{cyan-fg}Local Custom Operations:{/cyan-fg}\n';
+        content += '{gray-fg}Location: ./.geese/pipes/{/gray-fg}\n';
+        content += this.formatOperationsList(bySource.local);
       }
     } else {
-      // Original simple listing
+      // Simple listing
       const allOps = pipeOps.list();
       
       // Get custom operations
@@ -140,23 +141,23 @@ class PipeCLI {
           .map(f => path.basename(f, '.js'));
       }
 
-      // Display built-in operations
-      console.log(chalk.cyan('Built-in Operations:'));
+      // Build content for built-in operations
+      content += '{cyan-fg}Built-in Operations:{/cyan-fg}\n';
       const builtinOps = allOps.filter(op => !customOps.includes(op));
-      this.displayOperationsList(builtinOps);
+      content += this.formatOperationsList(builtinOps);
 
-      // Display custom operations
+      // Build content for custom operations
       if (customOps.length > 0) {
-        console.log();
-        console.log(chalk.cyan('Custom Operations:'));
-        console.log(chalk.gray(`  Location: ${pipesDir}`));
-        this.displayOperationsList(customOps);
+        content += '\n{cyan-fg}Custom Operations:{/cyan-fg}\n';
+        content += `{gray-fg}Location: ${pipesDir}{/gray-fg}\n`;
+        content += this.formatOperationsList(customOps);
       }
     }
 
-    console.log();
-    console.log(chalk.gray('Use "geese pipe new <name>" to create a custom pipe operation.'));
-    console.log(chalk.gray('Use "geese pipe list --sources" to see operation sources.'));
+    content += '\n{gray-fg}Use "geese pipe new <name>" to create a custom pipe operation.{/gray-fg}\n';
+    content += '{gray-fg}Use "geese pipe list --sources" to see operation sources.{/gray-fg}';
+    
+    await SimpleUI.showBox('📦 Available Pipe Operations', content);
   }
 
   /**
@@ -171,6 +172,24 @@ class PipeCLI {
       const row = sorted.slice(i, i + columns);
       console.log('  ' + row.map(op => chalk.green(op.padEnd(20))).join(''));
     }
+  }
+
+  /**
+   * Format a list of operations for TUI display
+   * @param {string[]} operations - Array of operation names
+   * @returns {string} Formatted string
+   */
+  static formatOperationsList(operations) {
+    const columns = 4;
+    const sorted = operations.sort();
+    let result = '';
+    
+    for (let i = 0; i < sorted.length; i += columns) {
+      const row = sorted.slice(i, i + columns);
+      result += '  ' + row.map(op => `{green-fg}${op.padEnd(20)}{/green-fg}`).join('') + '\n';
+    }
+    
+    return result;
   }
 
   /**
