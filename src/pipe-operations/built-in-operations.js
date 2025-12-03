@@ -8,6 +8,9 @@ const ListOperations = require('./operations/list-operations');
 const TypeOperations = require('./operations/type-operations');
 const RegexOperations = require('./operations/regex-operations');
 const UtilityOperations = require('./operations/utility-operations');
+const TextOperations = require('./operations/text-operations');
+const JsonQueryOperations = require('./operations/json-query-operations');
+const GlobOperations = require('./operations/glob-operations');
 
 class BuiltInOperations {
   /**
@@ -22,6 +25,9 @@ class BuiltInOperations {
     TypeOperations.register(registry);
     RegexOperations.register(registry);
     UtilityOperations.register(registry);
+    TextOperations.register(registry);
+    JsonQueryOperations.register(registry);
+    GlobOperations.register(registry);
   }
 }
 
