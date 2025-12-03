@@ -20,6 +20,23 @@ const CLIArgumentParser = require('../src/cli-argument-parser');
 const program = new Command();
 
 /**
+ * Check if a command is available in the system
+ * Cross-platform alternative to 'which' command
+ * @param {string} command - Command to check
+ * @returns {Promise<boolean>}
+ */
+async function isCommandAvailable(command) {
+  return new Promise((resolve) => {
+    const testProc = spawn(command, ['--version'], { 
+      stdio: 'pipe',
+      shell: false 
+    });
+    testProc.on('close', (code) => resolve(code === 0));
+    testProc.on('error', () => resolve(false));
+  });
+}
+
+/**
  * Launch file editor for a given file path
  * Uses $VISUAL or $EDITOR environment variable, or falls back to common editors
  * @param {string} filePath - Path to file to edit
@@ -30,7 +47,7 @@ async function launchEditor(filePath) {
   const editor = process.env.VISUAL || process.env.EDITOR;
   
   if (!editor) {
-    // Try common editors
+    // Try common editors (works on Unix-like systems)
     const commonEditors = ['nano', 'vim', 'vi', 'emacs'];
     
     console.log(chalk.yellow('⚠️  No $EDITOR or $VISUAL environment variable set.'));
@@ -39,18 +56,9 @@ async function launchEditor(filePath) {
     // Check which editor is available
     let availableEditor = null;
     for (const ed of commonEditors) {
-      try {
-        const result = await new Promise((resolve) => {
-          const proc = spawn('which', [ed], { stdio: 'pipe' });
-          proc.on('close', (code) => resolve(code === 0));
-          proc.on('error', () => resolve(false));
-        });
-        if (result) {
-          availableEditor = ed;
-          break;
-        }
-      } catch (e) {
-        // Continue to next editor
+      if (await isCommandAvailable(ed)) {
+        availableEditor = ed;
+        break;
       }
     }
     
@@ -82,16 +90,14 @@ async function launchEditor(filePath) {
       });
     });
   } else {
-    // Use specified editor
+    // Use specified editor - use shell mode to properly handle complex editor commands
+    // This allows editors like "code --wait" or even shell scripts to work correctly
     return new Promise((resolve, reject) => {
-      // Split editor command in case it has arguments (e.g., "code --wait")
-      const editorParts = editor.split(' ');
-      const editorCmd = editorParts[0];
-      const editorArgs = [...editorParts.slice(1), filePath];
-      
-      const editorProc = spawn(editorCmd, editorArgs, {
+      // Use shell mode to properly parse the editor command with arguments
+      // This handles quoted strings and complex commands correctly
+      const editorProc = spawn(editor, [filePath], {
         stdio: 'inherit',
-        shell: false
+        shell: true
       });
       
       editorProc.on('exit', (code) => {
