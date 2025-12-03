@@ -165,10 +165,16 @@ class JsonQueryOperations {
         // Perform comparison based on operator
         switch (operator) {
           case '==':
+            // Loose equality comparison
+            return itemValue == compareValue;
           case '===':
+            // Strict equality with string conversion for consistency
             return String(itemValue) === String(compareValue);
           case '!=':
+            // Loose inequality comparison
+            return itemValue != compareValue;
           case '!==':
+            // Strict inequality with string conversion for consistency
             return String(itemValue) !== String(compareValue);
           case '>':
             return Number(itemValue) > Number(compareValue);
@@ -190,10 +196,13 @@ class JsonQueryOperations {
      * jqMap - Map array elements to extract a property (like jq 'map(.property)')
      * @param {array|string} value - JSON array or JSON string
      * @param {array} args - [property] - Property to extract
-     * @returns {array} Array of extracted values
+     * @returns {array} Array of extracted values (undefined for items without the property)
      * 
      * Example:
      *   [{"name": "A"}, {"name": "B"}] ~> jqMap name  // ["A", "B"]
+     * 
+     * Note: Returns undefined for non-object items or items missing the property.
+     * This behavior matches jq's map operation.
      */
     registry.register('jqMap', (value, args) => {
       if (args.length === 0) {
@@ -218,6 +227,7 @@ class JsonQueryOperations {
         if (typeof item === 'object' && item !== null) {
           return item[property];
         }
+        // Return undefined for non-objects, consistent with jq behavior
         return undefined;
       });
     }, true);
