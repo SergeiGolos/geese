@@ -63,7 +63,14 @@ class ObjectPathHelper {
     }
     
     // Set the final value
+    // This is safe from prototype pollution because:
+    // 1. All keys (including finalKey) were validated by validatePath() above (line 47)
+    // 2. validatePath() explicitly checks for '__proto__', 'constructor', and 'prototype'
+    // 3. The validation throws an error if any dangerous key is found
     const finalKey = keys[keys.length - 1];
+    
+    // lgtm[js/prototype-pollution-utility]
+    // Simple assignment is safe here due to key validation above
     current[finalKey] = value;
     
     return obj;
@@ -80,7 +87,7 @@ class ObjectPathHelper {
     let current = obj;
     
     for (const key of keys) {
-      if (current && typeof current === 'object' && key in current) {
+      if (current && typeof current === 'object' && Object.prototype.hasOwnProperty.call(current, key)) {
         current = current[key];
       } else {
         return undefined;
@@ -107,7 +114,7 @@ class ObjectPathHelper {
     let current = obj;
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
-      if (!current || typeof current !== 'object' || !(key in current)) {
+      if (!current || typeof current !== 'object' || !Object.prototype.hasOwnProperty.call(current, key)) {
         return false;
       }
       current = current[key];
@@ -115,7 +122,7 @@ class ObjectPathHelper {
     
     // Delete the final key
     const finalKey = keys[keys.length - 1];
-    if (current && typeof current === 'object' && finalKey in current) {
+    if (current && typeof current === 'object' && Object.prototype.hasOwnProperty.call(current, finalKey)) {
       delete current[finalKey];
       return true;
     }
