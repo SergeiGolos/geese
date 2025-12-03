@@ -70,6 +70,9 @@ Please provide:
   buildArgs(config) {
     const args = [];
     
+    // Add the session start command first (required by goose CLI)
+    args.push('session', 'start');
+    
     // Add config file if specified
     if (config.config) {
       args.push('--config', config.config);
