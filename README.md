@@ -60,8 +60,8 @@ That's it! Geese will:
 
 ```yaml
 project_name: "My App" ~> toUpperCase
-files: "*.json" ~> readFile ~> parseJson ~> jqSelect users ~> jqMap name
-errors: "app.log" ~> readFile ~> grep "^ERROR" ~> grepCount
+files: "./users.json" ~> readFile ~> parseJson ~> jqSelect users ~> jqMap name
+errors: "./logs/app.log" ~> readFile ~> grep "^ERROR" ~> grepCount
 ```
 
 This gives you:
@@ -69,7 +69,7 @@ This gives you:
 - `files` → Array of user names from JSON
 - `errors` → Count of error lines in log file
 
-**Pipes** are JavaScript operations that transform data. Chain them with `~>` like Unix pipes.
+**Pipes** are JavaScript operations that transform data. Chain them with `~>` like Unix pipes. Use file paths for `readFile` operations.
 
 ## 📋 Core Features
 
@@ -280,7 +280,7 @@ geese config --list
 ```
 
 **Common issues:**
-- **"goose not found"**: Use `geese -g /path/to/goose`
+- **"goose not found"**: Install [Goose AI](https://github.com/block/goose) first, or specify custom path: `geese -g /path/to/goose`
 - **No files matched**: Check glob patterns with `--dry-run`
 - **Template errors**: Verify Handlebars syntax
 
