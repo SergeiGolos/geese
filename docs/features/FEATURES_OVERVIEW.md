@@ -491,13 +491,15 @@ geese run --dry-run
 ────────────────────────────────────────────────────────────
 
 🔧 Command:
-  goose --model gpt-4 --recipe code-review
+  goose session start --model gpt-4 --recipe code-review
 
 📥 Arguments:
-  [0] --model
-  [1] gpt-4
-  [2] --recipe
-  [3] code-review
+  [0] session
+  [1] start
+  [2] --model
+  [3] gpt-4
+  [4] --recipe
+  [5] code-review
 
 📝 Standard Input (stdin):
     1 | Review this file...
