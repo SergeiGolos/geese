@@ -381,17 +381,44 @@ geese run --dry-run
 # Create a new .geese file with default settings
 geese new my-review
 
+# Create with interactive wizard to configure properties
+geese new my-review --wizard
+
 # Create with specific tool (defaults to goose)
 geese new my-review --tool goose
 
 # Create in a specific directory
 geese new my-review -o ./templates
+
+# Create and immediately open in editor
+geese new my-review --edit
 ```
 
 The `new` command creates a .geese file with:
 - Default frontmatter properties from your config
 - Standard template content for the selected tool
 - Proper YAML formatting
+
+#### Using the Wizard
+
+The `--wizard` flag launches an interactive wizard that guides you through configuring your .geese file:
+
+```bash
+geese new my-review --wizard
+```
+
+The wizard provides:
+- **Helpful hints** for each property with descriptions and examples
+- **Select options** for properties with known values (e.g., model selection)
+- **Smart defaults** from your configuration
+- **Interactive prompts** for arrays and custom values
+- **Optional property selection** to only configure what you need
+
+Example wizard flow:
+1. Configure required properties (`include`, `recipe`)
+2. Choose which optional properties to configure
+3. Select from predefined options or enter custom values
+4. File is created with your configuration
 
 ### Managing Configuration
 
@@ -445,7 +472,9 @@ Arguments:
 
 Options:
   -t, --tool <tool>     CLI tool to use (default: "goose")
-  -o, --output <dir>    Output directory (default: ".")
+  -o, --output <dir>    Output directory (default: ".geese/")
+  --wizard              Interactive wizard to configure system properties
+  --edit                Open the created file in editor
   -h, --help            Display help for command
 ```
 
