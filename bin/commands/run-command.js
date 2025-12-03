@@ -2,7 +2,6 @@ const path = require('path');
 const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
 const inquirer = require('inquirer').default || require('inquirer');
-const ReportGenerator = require('../../src/report-generator');
 const CLIArgumentParser = require('../../src/cli-argument-parser');
 
 /**
@@ -126,10 +125,16 @@ async function runCommand(container, directory, options) {
   const parser = container.get('parser');
   const toolRegistry = container.get('toolRegistry');
   
-  // Update report generator with output directory if specified
-  const reportGenerator = options.output 
-    ? new ReportGenerator(options.output)
-    : container.get('reportGenerator');
+  // Get or create report generator with custom output directory if specified
+  let reportGenerator;
+  if (options.output) {
+    // Create a temporary container with custom log directory
+    const { createContainer } = require('../../src/container-setup');
+    const tempContainer = createContainer({ logDir: options.output });
+    reportGenerator = tempContainer.get('reportGenerator');
+  } else {
+    reportGenerator = container.get('reportGenerator');
+  }
   
   // Load hierarchical configuration
   const hierarchicalConfig = await configManager.loadHierarchicalConfig(workingDir, {}, cliConfig);
