@@ -36,6 +36,9 @@ class PromptBuilder {
       case 'number':
         return await PromptBuilder.promptNumber(displayName, metadata, currentValue || metadata.default);
       
+      case 'confirm':
+        return await PromptBuilder.promptConfirm(displayName, currentValue !== undefined ? currentValue : metadata.default);
+      
       case 'input':
       default:
         return await PromptBuilder.promptInput(displayName, currentValue || metadata.default);
@@ -173,6 +176,25 @@ class PromptBuilder {
         type: 'input',
         name: 'value',
         message: `Enter ${name}:`,
+        default: defaultValue
+      }
+    ]);
+
+    return value;
+  }
+
+  /**
+   * Prompt for a boolean (yes/no) value
+   * @param {string} name - Property name
+   * @param {boolean} defaultValue - Default value
+   * @returns {Promise<boolean>} Boolean value
+   */
+  static async promptConfirm(name, defaultValue) {
+    const { value } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'value',
+        message: `${name}?`,
         default: defaultValue
       }
     ]);

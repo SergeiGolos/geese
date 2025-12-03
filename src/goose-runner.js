@@ -25,7 +25,7 @@ class GooseRunner extends CLIRunner {
   getFrontmatterSchema() {
     return {
       required: ['include', 'recipe'],
-      optional: ['exclude', 'model', 'temperature', 'max_tokens', 'flags']
+      optional: ['exclude', 'model', 'temperature', 'max_tokens', 'config', 'profile', 'resume', 'log_level', 'no_color', 'flags']
     };
   }
 
@@ -70,6 +70,16 @@ Please provide:
   buildArgs(config) {
     const args = [];
     
+    // Add config file if specified
+    if (config.config) {
+      args.push('--config', config.config);
+    }
+    
+    // Add profile if specified
+    if (config.profile) {
+      args.push('--profile', config.profile);
+    }
+    
     // Add model if specified
     if (config.model) {
       args.push('--model', config.model);
@@ -88,6 +98,21 @@ Please provide:
     // Add max_tokens if specified
     if (config.max_tokens !== undefined) {
       args.push('--max-tokens', String(config.max_tokens));
+    }
+    
+    // Add resume session if specified
+    if (config.resume) {
+      args.push('--resume', config.resume);
+    }
+    
+    // Add log level if specified
+    if (config.log_level) {
+      args.push('--log-level', config.log_level);
+    }
+    
+    // Add no-color flag if specified
+    if (config.no_color === true) {
+      args.push('--no-color');
     }
     
     // Add any additional flags from config
