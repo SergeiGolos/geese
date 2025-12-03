@@ -583,9 +583,10 @@ assert(emittedEvents[0].status === 'complete');
 
 ## Further Reading
 
-- [TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md) - Technical debt analysis
+- [TECHNICAL_DEBT.md](./TECHNICAL_DEBT.md) - Historical technical debt analysis (completed work)
+- [Future_Tech_debt.md](./Future_Tech_debt.md) - Future technical debt planning
 - [ADR Directory](./adr/) - Architecture decision records
-- [INTERFACE_ABSTRACTION_IMPROVEMENTS.md](./INTERFACE_ABSTRACTION_IMPROVEMENTS.md) - Interface improvements
+- [TESTING_GUIDE.md](./TESTING_GUIDE.md) - Comprehensive testing methodology
 - [README.md](../README.md) - Project overview
 
 ---
