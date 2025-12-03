@@ -8,12 +8,16 @@ const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
 const DirectoryWalker = require('./utils/directory-walker');
+const { InputValidator, SecurityError } = require('./security/input-validator');
+const RateLimiter = require('./utils/rate-limiter');
 
 class PipeOperations {
   constructor() {
     this.operations = new Map();
     this.builtinOperations = new Set();
     this.operationSources = new Map(); // Track where each operation came from
+    // Rate limiter for file operations (50 reads per second max)
+    this.fileReadLimiter = new RateLimiter(50);
     this.registerBuiltinOperations();
   }
 
@@ -241,12 +245,16 @@ class PipeOperations {
       return value.join(separator);
     });
 
-    // File operations
-    // WARNING: readFile does not prevent directory traversal with ../ sequences
-    // This is by design to allow flexibility, but be aware of security implications
+    // File operations with security and rate limiting
     this.register('readFile', (value, args, context) => {
       const filePath = String(value);
       const encoding = args[0] || 'utf8';
+      
+      // Apply rate limiting to prevent resource exhaustion
+      // Use tryAcquire for synchronous operation - if limit exceeded, throw error
+      if (!this.fileReadLimiter.tryAcquire()) {
+        throw new Error(`Rate limit exceeded for file read operations. Maximum ${this.fileReadLimiter.maxPerSecond} reads per second.`);
+      }
       
       // Resolve relative to geese file directory if context has it
       let resolvedPath = filePath;
@@ -254,12 +262,24 @@ class PipeOperations {
         resolvedPath = path.resolve(context._geeseFileDir, filePath);
       }
       
+      // Validate file path for security (allow traversal for flexibility, but validate patterns)
+      try {
+        InputValidator.validateFilePath(resolvedPath, { 
+          allowAbsolute: true, 
+          allowTraversal: true 
+        });
+      } catch (err) {
+        if (err instanceof SecurityError) {
+          // Security validation failed - throw a more informative error
+          throw new Error(`Security validation failed for file path: ${filePath}. ${err.message}`);
+        }
+        throw err;
+      }
+      
       if (!fs.existsSync(resolvedPath)) {
         throw new Error(`File not found: ${resolvedPath}`);
       }
       
-      // Note: This allows reading any file the process has access to
-      // Directory traversal with ../ is possible
       return fs.readFileSync(resolvedPath, encoding);
     }, true);
 
