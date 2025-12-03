@@ -201,6 +201,32 @@ class GeeseParser {
   }
 
   /**
+   * Process a pattern with templates and pipes
+   * @param {string} pattern - Pattern to process
+   * @param {Object} context - Context for template/pipe evaluation
+   * @param {string} patternType - Type of pattern (for error messages)
+   * @returns {string} Processed pattern
+   * @private
+   */
+  processPattern(pattern, context, patternType) {
+    try {
+      let processed = pattern;
+      
+      if (processed.includes('{{')) {
+        processed = this.renderTemplate(processed, context);
+      }
+      
+      if (processed.includes('~>')) {
+        processed = this.pipeOperations.executePipeChain(processed, context);
+      }
+      
+      return processed;
+    } catch (error) {
+      throw new Error(`Failed to process ${patternType} pattern "${pattern}": ${error.message}`);
+    }
+  }
+
+  /**
    * Collect target files based on include/exclude patterns
    * Supports templates and pipes in patterns using hidden system variables
    * @param {Object} frontmatter - Frontmatter from .geese file
@@ -221,60 +247,23 @@ class GeeseParser {
     
     // Process include patterns if they contain templates or pipes
     if (typeof include === 'string') {
-      // If include is a string (with templates/pipes), process it
-      let processedInclude = include;
-      
-      if (processedInclude.includes('{{')) {
-        processedInclude = this.renderTemplate(processedInclude, hiddenSystemContext);
-      }
-      
-      if (processedInclude.includes('~>')) {
-        processedInclude = this.pipeOperations.executePipeChain(processedInclude, hiddenSystemContext);
-      }
-      
-      // Convert to array if needed
+      const processedInclude = this.processPattern(include, hiddenSystemContext, 'include');
       include = Array.isArray(processedInclude) ? processedInclude : [processedInclude];
     } else if (Array.isArray(include)) {
-      // Process each pattern individually
-      include = include.map(pattern => {
+      include = include.map((pattern, index) => {
         if (typeof pattern !== 'string') return pattern;
-        
-        let processed = pattern;
-        if (processed.includes('{{')) {
-          processed = this.renderTemplate(processed, hiddenSystemContext);
-        }
-        if (processed.includes('~>')) {
-          processed = this.pipeOperations.executePipeChain(processed, hiddenSystemContext);
-        }
-        return processed;
+        return this.processPattern(pattern, hiddenSystemContext, `include[${index}]`);
       });
     }
     
     // Process exclude patterns if they contain templates or pipes
     if (typeof exclude === 'string') {
-      let processedExclude = exclude;
-      
-      if (processedExclude.includes('{{')) {
-        processedExclude = this.renderTemplate(processedExclude, hiddenSystemContext);
-      }
-      
-      if (processedExclude.includes('~>')) {
-        processedExclude = this.pipeOperations.executePipeChain(processedExclude, hiddenSystemContext);
-      }
-      
+      const processedExclude = this.processPattern(exclude, hiddenSystemContext, 'exclude');
       exclude = Array.isArray(processedExclude) ? processedExclude : [processedExclude];
     } else if (Array.isArray(exclude)) {
-      exclude = exclude.map(pattern => {
+      exclude = exclude.map((pattern, index) => {
         if (typeof pattern !== 'string') return pattern;
-        
-        let processed = pattern;
-        if (processed.includes('{{')) {
-          processed = this.renderTemplate(processed, hiddenSystemContext);
-        }
-        if (processed.includes('~>')) {
-          processed = this.pipeOperations.executePipeChain(processed, hiddenSystemContext);
-        }
-        return processed;
+        return this.processPattern(pattern, hiddenSystemContext, `exclude[${index}]`);
       });
     }
     
