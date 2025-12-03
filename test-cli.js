@@ -266,6 +266,132 @@ test('geese pipe new with --edit creates pipe file (no editor test)', () => {
   }
 });
 
+// Test 17: geese new --wizard flag exists
+test('geese new --wizard flag exists in help', () => {
+  const help = exec(`node ${GEESE_BIN} new --help`);
+  if (!help.includes('--wizard')) {
+    throw new Error('--wizard flag not found in new help');
+  }
+});
+
+// Test 18: Wizard module can be instantiated
+test('Wizard module can be instantiated', () => {
+  const Wizard = require('./src/wizard');
+  const ToolRegistry = require('./src/tool-registry');
+  const runner = ToolRegistry.getRunner('goose');
+  
+  const wizard = new Wizard(runner);
+  if (!wizard) {
+    throw new Error('Wizard could not be instantiated');
+  }
+  
+  // Check wizard has the expected methods
+  if (typeof wizard.run !== 'function') {
+    throw new Error('Wizard missing run method');
+  }
+  if (typeof wizard.promptForProperty !== 'function') {
+    throw new Error('Wizard missing promptForProperty method');
+  }
+  if (typeof wizard.getPropertyMetadata !== 'function') {
+    throw new Error('Wizard missing getPropertyMetadata method');
+  }
+});
+
+// Test 19: Wizard getPropertyMetadata returns correct metadata for known properties
+test('Wizard getPropertyMetadata returns correct metadata', () => {
+  const Wizard = require('./src/wizard');
+  const ToolRegistry = require('./src/tool-registry');
+  const runner = ToolRegistry.getRunner('goose');
+  const wizard = new Wizard(runner);
+  
+  // Test known properties
+  const includeMeta = wizard.getPropertyMetadata('include');
+  if (includeMeta.type !== 'array' || !includeMeta.hint) {
+    throw new Error('include metadata incorrect');
+  }
+  
+  const modelMeta = wizard.getPropertyMetadata('model');
+  if (modelMeta.type !== 'select' || !modelMeta.options || modelMeta.options.length === 0) {
+    throw new Error('model metadata incorrect');
+  }
+  
+  const tempMeta = wizard.getPropertyMetadata('temperature');
+  if (tempMeta.type !== 'number' || tempMeta.min !== 0 || tempMeta.max !== 1) {
+    throw new Error('temperature metadata incorrect');
+  }
+});
+
+// Test 20: Wizard getPropertyMetadata returns fallback for unknown properties
+test('Wizard getPropertyMetadata returns fallback for unknown properties', () => {
+  const Wizard = require('./src/wizard');
+  const ToolRegistry = require('./src/tool-registry');
+  const runner = ToolRegistry.getRunner('goose');
+  const wizard = new Wizard(runner);
+  
+  const unknownMeta = wizard.getPropertyMetadata('unknown_property');
+  if (unknownMeta.type !== 'input' || !unknownMeta.hint) {
+    throw new Error('Unknown property metadata should return input type with hint');
+  }
+});
+
+// Test 21: Wizard getCurrentValue handles different prefixes
+test('Wizard getCurrentValue handles different prefixes', () => {
+  const Wizard = require('./src/wizard');
+  const ToolRegistry = require('./src/tool-registry');
+  const runner = ToolRegistry.getRunner('goose');
+  const wizard = new Wizard(runner);
+  
+  // Test with $ prefix
+  let frontmatter = { '$include': ['test'] };
+  let value = wizard.getCurrentValue(frontmatter, 'include');
+  if (!value || value[0] !== 'test') {
+    throw new Error('getCurrentValue failed with $ prefix');
+  }
+  
+  // Test with @ prefix
+  frontmatter = { '@include': ['test2'] };
+  value = wizard.getCurrentValue(frontmatter, 'include');
+  if (!value || value[0] !== 'test2') {
+    throw new Error('getCurrentValue failed with @ prefix');
+  }
+  
+  // Test with no prefix
+  frontmatter = { 'include': ['test3'] };
+  value = wizard.getCurrentValue(frontmatter, 'include');
+  if (!value || value[0] !== 'test3') {
+    throw new Error('getCurrentValue failed with no prefix');
+  }
+});
+
+// Test 22: Wizard cleanupLegacyPrefixes converts @ to $
+test('Wizard cleanupLegacyPrefixes converts @ to $', () => {
+  const Wizard = require('./src/wizard');
+  const ToolRegistry = require('./src/tool-registry');
+  const runner = ToolRegistry.getRunner('goose');
+  const wizard = new Wizard(runner);
+  
+  const frontmatter = {
+    '@include': ['test'],
+    '@recipe': 'test-recipe',
+    'other': 'value'
+  };
+  
+  wizard.cleanupLegacyPrefixes(frontmatter);
+  
+  if (frontmatter['@include'] !== undefined) {
+    throw new Error('@ prefix should be removed');
+  }
+  if (frontmatter['$include'][0] !== 'test') {
+    throw new Error('$ prefix should be added');
+  }
+  if (frontmatter['$recipe'] !== 'test-recipe') {
+    throw new Error('@ to $ conversion failed for recipe');
+  }
+  if (frontmatter['other'] !== 'value') {
+    throw new Error('Non-prefixed properties should remain unchanged');
+  }
+});
+
 // Cleanup after tests
 cleanup();
 
