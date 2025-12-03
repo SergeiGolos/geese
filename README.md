@@ -1,1047 +1,297 @@
 # 🦢 Geese - AI-Powered File Processing Tool
 
-Geese is a powerful CLI tool that processes `.geese` files to apply AI-powered transformations to your codebase. It allows you to define recipes, prompts, and file patterns, then automatically processes matching files with your AI assistant.
+**Batch prompt engineering made simple.** Use Handlebars templates, glob patterns, and JavaScript pipes to process multiple files with AI tools automatically.
 
-## 🚀 Features
+## Why Geese?
 
-- **Hierarchical Configuration**: 4-level configuration system (core → global → local → CLI)
-- **Hierarchical File Discovery**: Discover .geese files from global, local, and root directories
-- **Pipe Operations Inheritance**: Custom pipes at global and local levels with override support
-- **Custom Tool Runners**: Create integrations for any CLI AI tool (Aider, Claude, etc.)
-- **Template-based Processing**: Use Handlebars templates to create dynamic prompts
-- **File Pattern Matching**: Include/exclude files with glob patterns
-- **Interactive Selection**: Choose which files to process with an intuitive CLI interface
-- **Comprehensive Logging**: Automatic markdown reports with detailed session information
-- **Configurable AI Integration**: Works with Goose AI assistant by default
-- **Dry Run Mode**: Preview what would be processed without executing
-- **Configuration Management**: Multi-level configuration with easy inspection and debugging
-- **Multiple Tools Support**: Extensible architecture for different AI CLI tools
-- **Easy File Creation**: Generate new .geese files with `geese new` (defaults to `.geese/` directory)
+Transform how you work with AI assistants by processing entire codebases at once:
 
-## 📦 Installation
+- **Handlebars Templates**: Create dynamic, reusable prompts with template variables
+- **Glob Include/Exclude**: Target exactly the files you want with powerful pattern matching
+- **JavaScript Pipes**: Transform data on-the-fly with chainable operations (like Unix pipes, but for prompts)
+- **Batch Processing**: Apply the same prompt to dozens of files with one command
+
+Instead of manually pasting code into AI tools file-by-file, define your pattern once and let Geese handle the rest.
+
+## 🚀 Getting Started
+
+### Installation
 
 ```bash
 npm install -g geese
 ```
 
-Or for development:
+### Quick Example
 
-```bash
-git clone <repository>
-cd geese
-npm install
-npm link
-```
-
-## 🎯 Quick Start
-
-1. (Optional) Set up your configuration defaults:
-   ```bash
-   geese config --set goose.model gpt-4
-   geese config --set goose.temperature 0.7
-   ```
-
-2. Create a `.geese` file in your project directory:
+1. **Create a `.geese` file** to define your prompt template:
    ```bash
    geese new code-review
    ```
 
-3. Edit the `.geese` file to customize the template and file patterns
+2. **Edit the file** (`.geese/code-review.geese`):
+   ```yaml
+   ---
+   _include:
+     - "src/**/*.js"
+   _exclude:
+     - "*.test.js"
+   _recipe: "code-review"
+   review_focus: "security and performance"
+   ---
+   
+   Review this file for {{review_focus}}.
+   
+   File: {{filename}}
+   {{content}}
+   ```
 
-4. Run `geese` to process files interactively:
+3. **Run it**:
    ```bash
    geese
    ```
 
-5. Review the generated report in the `./logs` directory
+That's it! Geese will:
+- Find all matching files (`src/**/*.js`, excluding tests)
+- Generate a custom prompt for each file
+- Process them with your AI tool
+- Create a detailed markdown report
 
-## 🏗️ Hierarchical Configuration System
+### What You Get
 
-Geese implements a 4-level configuration hierarchy where settings cascade from core defaults through multiple levels to command-line overrides. This allows you to set global defaults, project-specific settings, and runtime overrides.
+```yaml
+project_name: "My App" ~> toUpperCase
+files: "*.json" ~> readFile ~> parseJson ~> jqSelect users ~> jqMap name
+errors: "app.log" ~> readFile ~> grep "^ERROR" ~> grepCount
+```
 
-### Configuration Levels (Priority: Low → High)
+This gives you:
+- `project_name` → `"MY APP"`
+- `files` → Array of user names from JSON
+- `errors` → Count of error lines in log file
 
-1. **Core Defaults** - Built-in application defaults
-2. **Global Config** - `~/.geese/config.json` (user-wide settings)
-3. **Local Config** - `./.geese/config.json` (project-specific settings)
-4. **CLI Arguments** - Command-line overrides (highest priority)
+**Pipes** are JavaScript operations that transform data. Chain them with `~>` like Unix pipes.
 
-### File Discovery (Priority: Low → High)
+## 📋 Core Features
 
-`.geese` files are discovered from multiple locations:
+### Hierarchical Configuration
 
-1. **Global**: `~/.geese/*.geese` - User-wide templates
-2. **Local**: `./.geese/*.geese` - Project-specific (recommended, created by default)
-3. **Root**: `./*.geese` - Legacy/convenience location
-
-**Note**: By default, `geese new` creates files in `./.geese/` to keep your project root clean.
-
-### Configuration Commands
+Set defaults once, override when needed:
+- **Core** → **Global** (`~/.geese/config.json`) → **Local** (`./.geese/config.json`) → **CLI**
 
 ```bash
-# Initialize local project configuration
-geese config --init-local
-
-# View configuration hierarchy
-geese config --inspect
-
-# Show effective configuration
-geese config --show
-
-# Set global configuration
+# Set global defaults
 geese config --set goose.model gpt-4
-geese config --set goose.temperature 0.8
 
-# Get configuration value
-geese config --get goose.model
-
-# List all configuration
-geese config --list
+# Override per-project in .geese/config.json
+# Override per-file in .geese frontmatter
+# Override per-run with CLI flags
 ```
 
-### Example: Multi-Level Configuration
+**→ [Configuration Guide](docs/CONFIGURATION.md)** - Full details on multi-level configuration
 
-**Global Config** (`~/.geese/config.json`):
-```json
-{
-  "goose": {
-    "model": "gpt-4",
-    "temperature": 0.7
-  }
-}
-```
+### JavaScript Pipes
 
-**Local Config** (`./.geese/config.json`):
-```json
-{
-  "goose": {
-    "temperature": 0.5
-  }
-}
-```
+Transform data with chainable operations using the `~>` operator:
 
-**.geese File**:
 ```yaml
----
-_model: gpt-4-turbo
----
+# String operations
+text: "hello world" ~> toUpperCase ~> trim
+
+# File operations  
+data: "./config.json" ~> readFile ~> parseJson ~> jqSelect version
+
+# Log analysis
+errors: "./app.log" ~> readFile ~> grep "^ERROR" ~> grepCount
+
+# Array operations
+items: "a,b,c" ~> split , ~> join " | "
 ```
 
-**CLI Override**:
-```bash
-geese run --temperature 0.9
-```
+**Built-in pipes**: `trim`, `toUpperCase`, `readFile`, `parseJson`, `grep`, `jqSelect`, `split`, `join`, and [40+ more operations](docs/PIPES.md)
 
-**Result**: The effective configuration will use:
-- `model: gpt-4-turbo` (from .geese file)
-- `temperature: 0.9` (from CLI - highest priority)
-
-## 🔧 Custom Pipe Operations
-
-Geese supports custom pipe operations that can be defined at multiple levels:
-
-### Pipe Operation Hierarchy
-
-1. **Built-in**: Core operations (trim, toUpperCase, readFile, etc.)
-2. **Global**: `~/.geese/pipes/*.js` - User-wide custom operations
-3. **Local**: `./.geese/pipes/*.js` - Project-specific operations (highest priority)
-
-### Managing Custom Pipes
+**Custom pipes**: Create your own operations
 
 ```bash
-# List all available pipes
-geese pipe list
-
-# List pipes with source information
-geese pipe list --sources
-
-# Create a new custom pipe
-geese pipe new myCustomPipe -d "My custom operation"
-
-# Remove a custom pipe
-geese pipe remove myCustomPipe
+geese pipe new formatName -d "Format names in title case"
+# Edit ~/.geese/pipes/formatName.js
 ```
 
-### Example Custom Pipe
+**→ [Pipes Reference](docs/PIPES.md)** - Complete list of built-in operations  
+**→ [Custom Pipes Guide](docs/CUSTOM_PIPES.md)** - Build your own transformations
 
-Create `~/.geese/pipes/formatName.js`:
+### .geese File Format
 
-```javascript
-/**
- * Format a name in title case
- */
-module.exports = function formatName(value, args, context) {
-  return String(value)
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-};
-```
-
-Use in `.geese` file:
-```yaml
----
-author_name: "john doe" ~> formatName
----
-Author: {{author_name}}
-```
-
-Result: `Author: John Doe`
-
-## 📄 .geese File Format
-
-`.geese` files use YAML frontmatter with Handlebars template content:
+YAML frontmatter + Handlebars template:
 
 ```yaml
 ---
-# System properties use _ prefix to identify them
+# System properties (_prefix) control Geese
 _include:
   - "src/**/*.js"
-  - "*.md"
 _exclude:
-  - "node_modules/**"
   - "*.test.js"
 _recipe: "code-review"
 _model: "gpt-4"
-_temperature: 0.7
-_max_tokens: 2000
 
-# User properties - can use pipe operations for data transformation
-project_name: "My Awesome Project"
-review_focus: "performance and security"
-formatted_date: "2024-01-15" ~> default "Not Set"
+# User properties become template variables
+project_name: "My App"
+review_focus: "security"
 ---
 
-Please review the following file from {{project_name}}.
+Review {{filename}} from {{project_name}}.
+Focus: {{review_focus}}
 
-File: {{filename}}
-Path: {{filepath}}
-
-Focus on: {{review_focus}}
-
-Content:
 {{content}}
 ```
 
-### Frontmatter Properties
+**System Properties** (`_` prefix):
+- `_include` (required): Glob patterns for files
+- `_recipe` (required): AI tool recipe/mode
+- `_exclude`: Files to skip
+- `_model`, `_temperature`, `_max_tokens`: AI settings
+- `_config`, `_profile`, `_resume`: Advanced options
 
-#### System Properties (_ prefix)
-System properties control Geese behavior and are identified by the `_` prefix. When added to the context, the prefix is stripped:
+**Template Variables**:
+- `{{filename}}`, `{{filepath}}`, `{{content}}`: Auto-provided
+- Any custom frontmatter property (after pipes run)
 
-- **Required:**
-  - `_include`: Array of glob patterns for files to process (supports templates and pipes)
-  - `_recipe`: The Goose recipe to use
-
-- **Optional:**
-  - `_exclude`: Array of glob patterns for files to exclude (supports templates and pipes)
-  - `_model`: AI model to use (e.g., "gpt-4", "claude-3")
-  - `_temperature`: AI response temperature (0-1)
-  - `_max_tokens`: Maximum tokens in response
-  - `_config`: Path to custom goose config file (e.g., "~/.goose/custom-config.yaml")
-  - `_profile`: Profile name from goose config (e.g., "work", "personal")
-  - `_resume`: Session ID to resume a previous goose session
-  - `_log_level`: Logging level for goose output ("debug", "info", "warning", "error")
-  - `_no_color`: Disable colored output (boolean, true/false)
-  - `_flags`: Array of additional CLI flags
-
-**Note:** System properties now support templates (using `{{variable}}`) and pipe operations (using `~>`). For backward compatibility, properties with `@` or `$` prefix are automatically converted to `_` prefix.
-
-#### User Properties (no prefix)
-User properties become available as template variables and support pipe operations for data transformation:
-
-```yaml
-# Simple value
-project_name: My Project
-
-# With pipe operations - quotes optional for simple values
-formatted_title: code review ~> toUpperCase
-list_items: a,b,c ~> split , ~> join " | "
-file_content: ./data.txt ~> readFile
-trimmed_value: hello ~> trim ~> toUpperCase
-```
-
-### Pipe Operations
-
-Pipe operations allow you to transform property values using the `~>` operator. Operations are chained left-to-right. The parser automatically quotes pipe expressions, so you typically don't need quotes unless your value contains special YAML characters:
-
-```yaml
-# No quotes needed for simple values
-my_value: initial value ~> operation1 ~> operation2 arg1 arg2
-
-# Quotes recommended for values with special YAML characters
-complex: "value: with colons" ~> operation
-```
-
-#### Built-in Operations
-
-**String Operations:**
-- `trim` - Remove whitespace from both ends
-- `substring start [end]` - Extract substring
-- `toUpperCase` - Convert to uppercase
-- `toLowerCase` - Convert to lowercase
-- `replace pattern replacement` - Replace all occurrences
-- `split separator` - Split string into array
-- `join separator` - Join array into string
-
-**File Operations:**
-- `readFile [encoding]` - Read file content (default: utf8)
-- `loadFile [encoding]` - Alias for readFile
-
-**List Operations:**
-- `filter pattern` - Filter array by regex pattern
-- `map property` - Extract property from objects
-- `select index` - Get item at index
-- `first` - Get first item
-- `last` - Get last item
-- `length` - Get array/string length
-
-**Type Operations:**
-- `parseJson` - Parse JSON string
-- `stringify [indent]` - Convert to JSON string
-- `parseYaml` - Parse simple YAML
-- `parseInt [radix]` - Parse integer
-- `parseFloat` - Parse float
-
-**Regex Operations:**
-- `match pattern [flags]` - Match regex pattern
-- `test pattern [flags]` - Test regex pattern
-
-**Utility Operations:**
-- `default fallback` - Use fallback if empty
-- `echo` - Debug output (prints to console)
-
-**Text Operations (grep-like):**
-- `grep pattern [flags] [options]` - Search for lines matching a pattern (like grep command)
-  - flags: Optional regex flags (e.g., 'i' for case-insensitive)
-  - options: 'v' to invert match (like grep -v)
-  - Example: `content ~> grep "^Error"` - Find lines starting with "Error"
-  - Example: `logs ~> grep "warning" i` - Case-insensitive search
-  - Example: `text ~> grep "debug" "" v` - Exclude lines with "debug"
-- `grepCount pattern [flags]` - Count lines matching a pattern
-  - Example: `logs ~> grepCount "Error"` - Count error lines
-- `grepFirst pattern [flags]` - Get first line matching a pattern
-  - Example: `logs ~> grepFirst "^Fatal"` - Get first fatal error
-
-**JSON Query Operations (jq-like):**
-- `jqSelect path...` - Select a value from JSON using a path
-  - Example: `data ~> parseJson ~> jqSelect user name` - Get user.name
-  - Example: `json ~> jqSelect items 0` - Get first array element
-- `jqKeys` - Get all keys from a JSON object
-  - Example: `{"a":1,"b":2} ~> jqKeys` - Returns ["a","b"]
-- `jqValues` - Get all values from a JSON object/array
-  - Example: `{"a":1,"b":2} ~> jqValues` - Returns [1,2]
-- `jqFilter property operator value` - Filter array elements based on a condition
-  - Operators: ==, !=, >, <, >=, <=, contains
-  - Example: `users ~> jqFilter age > 18` - Filter users over 18
-  - Example: `items ~> jqFilter status == active` - Filter active items
-  - Example: `names ~> jqFilter "" contains "a"` - Filter strings containing "a"
-- `jqMap property` - Extract property from array of objects
-  - Example: `users ~> jqMap name` - Extract all names
-- `jqLength` - Get length of array or number of keys in object
-  - Example: `data ~> jqLength` - Get size
-- `jqHas key` - Check if object has a key
-  - Example: `config ~> jqHas debug` - Returns true/false
-
-**Glob Operations (file pattern matching):**
-- `globMatch pattern [flags]` - Test if string matches a glob pattern
-  - Example: `"test.js" ~> globMatch "*.js"` - Returns true
-  - Example: `filename ~> globMatch "**/*.ts" i` - Case-insensitive match
-- `globFilter pattern [mode]` - Filter array of strings by glob pattern
-  - mode: 'include' (default) or 'exclude'
-  - Example: `files ~> globFilter "*.js"` - Include only .js files
-  - Example: `files ~> globFilter "*.test.js" exclude` - Exclude test files
-- `globFilterMulti includePatterns [excludePatterns]` - Filter by multiple patterns
-  - Patterns can be comma-separated or JSON arrays
-  - Example: `files ~> globFilterMulti "*.js,*.ts"` - Include .js and .ts
-  - Example: `files ~> globFilterMulti "**/*.js" "**/*.test.js"` - .js but not tests
-- `globExtract pattern` - Extract string if it matches glob pattern
-  - Example: `path ~> globExtract "src/**/*.js"` - Returns path if matches
-
-#### Custom Pipe Operations
-
-Create custom pipe operations for your specific needs:
-
-```bash
-# Create a new pipe operation
-geese pipe new myOperation -d "My custom operation"
-
-# List available operations
-geese pipe list
-
-# Remove a custom operation
-geese pipe remove myOperation
-```
-
-Custom pipes are stored in `~/.geese/pipes/` and automatically loaded. They follow this signature:
-
-```javascript
-module.exports = function myOperation(value, args, context) {
-  // value: input from previous operation
-  // args: array of arguments passed to the operation
-  // context: object with all properties (including filename, content, etc.)
-  
-  // Your transformation logic here
-  return transformedValue;
-};
-```
-
-### Available Template Variables
-
-- `{{filename}}`: Target filename (e.g., "app.js")
-- `{{filepath}}`: Full path to target file
-- `{{content}}`: File content
-- `{{geese_file}}`: Name of the .geese file (without extension)
-- Any custom properties from frontmatter (after pipe operations are applied)
+**→ [File Format Reference](docs/FILE_FORMAT.md)** - Complete syntax guide
 
 ## 🛠️ Usage
 
-Geese provides five main commands:
-
-- **run** - Process .geese files (default command)
-- **new** - Create a new .geese file
-- **config** - Manage configuration settings
-- **pipe** - Manage custom pipe operations
-- **runner** - Manage custom tool runners
-
-### Running Geese (Process Files)
+### Basic Commands
 
 ```bash
-# Process all .geese files in current directory (interactive selection)
+# Run (interactive file selection)
 geese
-# or explicitly
-geese run
 
-# Process specific directory
-geese run ./my-project
+# Create new .geese file
+geese new code-review
 
-# Process specific .geese file
-geese -f code-review.geese
-# or
-geese run -f code-review.geese
+# Use creation wizard
+geese new my-task --wizard
 
-# Custom output directory for logs
-geese run -o ./reports
+# Process specific file
+geese -f my-review.geese
 
-# Custom goose executable path
-geese run -g /path/to/goose
+# Preview without running
+geese --dry-run
 
-# Dry run (preview only)
-geese run --dry-run
-```
-
-### Creating New .geese Files
-
-```bash
-# Create a new .geese file with default settings
-geese new my-review
-
-# Create with interactive wizard to configure properties
-geese new my-review --wizard
-
-# Create with specific tool (defaults to goose)
-geese new my-review --tool goose
-
-# Create in a specific directory
-geese new my-review -o ./templates
-
-# Create and immediately open in editor
-geese new my-review --edit
-```
-
-The `new` command creates a .geese file with:
-- Default frontmatter properties from your config
-- Standard template content for the selected tool
-- Proper YAML formatting
-
-#### Using the Wizard
-
-The `--wizard` flag launches an interactive wizard that guides you through configuring your .geese file:
-
-```bash
-geese new my-review --wizard
-```
-
-The wizard provides:
-- **Helpful hints** for each property with descriptions and examples
-- **Select options** for properties with known values (e.g., model selection)
-- **Smart defaults** from your configuration
-- **Interactive prompts** for arrays and custom values
-- **Optional property selection** to only configure what you need
-
-Example wizard flow:
-1. Configure required properties (`include`, `recipe`)
-2. Choose which optional properties to configure
-3. Select from predefined options or enter custom values
-4. File is created with your configuration
-
-### Managing Configuration
-
-```bash
-# View all configuration
-geese config
-# or
-geese config --list
-
-# Get a specific configuration value
-geese config --get goose.model
-
-# Set a configuration value
+# Set defaults
 geese config --set goose.model gpt-4
-
-# Set nested properties
-geese config --set goose.temperature 0.7
-
-# Set arrays (use JSON format)
-geese config --set goose.include '["src/**/*.js", "lib/**/*.js"]'
-
-# Delete a configuration value
-geese config --delete goose.temperature
 ```
 
-Configuration is stored in `~/.geese/config.json` and provides default values for new .geese files.
+**→ [CLI Reference](docs/CLI.md)** - All commands and options
 
-### Command Line Options
+### Custom Tool Runners
 
-#### Run Command
-```
-Usage: geese run [directory] [options]
-
-Arguments:
-  directory                 Directory to search for .geese files (default: ".")
-
-Options:
-  -f, --file <file>        Process a specific .geese file
-  -o, --output <dir>       Output directory for logs (default: "./logs")
-  -g, --goose-path <path>  Path to goose executable
-  --dry-run                Show what would be processed without executing
-  -h, --help               Display help for command
-```
-
-#### New Command
-```
-Usage: geese new [options] <name>
-
-Arguments:
-  name                  Name of the .geese file to create
-
-Options:
-  -t, --tool <tool>     CLI tool to use (default: "goose")
-  -o, --output <dir>    Output directory (default: ".geese/")
-  --wizard              Interactive wizard to configure system properties
-  --edit                Open the created file in editor
-  -h, --help            Display help for command
-```
-
-#### Config Command
-```
-Usage: geese config [options]
-
-Options:
-  --get <key>          Get a configuration value
-  --set <key> <value>  Set a configuration value
-  --delete <key>       Delete a configuration value
-  --list               List all configuration
-  -h, --help           Display help for command
-```
-
-#### Pipe Command
-```
-Usage: geese pipe <action> [name] [options]
-
-Actions:
-  list                 List all available pipe operations
-  new <name>           Create a new custom pipe operation
-  remove <name>        Remove a custom pipe operation
-  help                 Show detailed pipe help
-
-Options:
-  -d, --description <text>  Description for new pipe operation
-  -f, --force              Overwrite existing pipe without confirmation
-  -h, --help               Display help for command
-
-Examples:
-  geese pipe list
-  geese pipe new myPipe -d "My custom operation"
-  geese pipe remove myPipe
-  geese pipe help
-```
-
-#### Runner Command
-```
-Usage: geese runner <action> [name] [options]
-
-Actions:
-  list                 List all available tool runners
-  new <name>           Create a new custom runner
-  remove <name>        Remove a custom runner
-  help                 Show detailed runner help
-
-Options:
-  -d, --description <text>  Description for new runner
-  -f, --force              Overwrite existing runner without confirmation
-  --local                  Create/remove in local .geese directory
-  -s, --sources            Show runner sources (for list action)
-  -h, --help               Display help for command
-
-Examples:
-  geese runner list
-  geese runner list --sources
-  geese runner new aider -d "Aider AI coding assistant"
-  geese runner new myTool --local
-  geese runner remove aider
-```
-
-## 🔧 Custom Tool Runners
-
-Geese supports custom tool runners that allow you to integrate any CLI AI tool with the Geese workflow. Custom runners follow the same pattern as the built-in Goose runner.
-
-### Runner Hierarchy
-
-1. **Built-in**: Core runners (goose)
-2. **Global**: `~/.geese/runners/` - User-wide custom runners
-3. **Local**: `./.geese/runners/` - Project-specific runners (highest priority)
-
-### Managing Custom Runners
+Integrate any AI CLI tool (Aider, Claude, etc.):
 
 ```bash
-# List all available runners
-geese runner list
+# Create custom runner
+geese runner new aider -d "Aider AI assistant"
 
-# List runners with source information
-geese runner list --sources
+# Edit the generated files to match your tool's CLI
+# ~/.geese/runners/aider/AiderProvider.js
 
-# Create a new custom runner
-geese runner new aider -d "Aider AI coding assistant"
-
-# Create a local project-specific runner
-geese runner new myTool --local
-
-# Remove a custom runner
-geese runner remove aider
+# Use it
+geese new my-task --tool aider
 ```
 
-### Example Custom Runner: Aider
+**→ [Custom Runners Guide](docs/CUSTOM_RUNNERS.md)** - Build integrations for any AI tool
 
-Create an Aider runner:
+### Reporting
 
-```bash
-geese runner new aider -d "Aider AI coding assistant"
-```
-
-This creates:
-- `~/.geese/runners/aider/AiderProvider.js` - Command structure and configuration
-- `~/.geese/runners/aider/AiderRunner.js` - Execution wrapper
-- `~/.geese/runners/aider/index.js` - Entry point
-
-Edit `AiderProvider.js` to customize for your tool:
-
-```javascript
-class AiderProvider extends IAIToolProvider {
-  getDefaultPath() {
-    return 'aider'; // CLI command
-  }
-
-  buildArgs(config) {
-    const args = [];
-    if (config.model) args.push('--model', config.model);
-    if (config.edit_format) args.push('--edit-format', config.edit_format);
-    // Add more tool-specific arguments
-    return args;
-  }
-  
-  // ... other methods
-}
-```
-
-Then use it:
-
-```bash
-# Create a .geese file using the aider runner
-geese new code-fix --tool aider
-
-# Process files with aider
-geese run
-```
-
-For detailed documentation on creating custom runners, see [Custom Tool Runners Guide](docs/CUSTOM_TOOL_RUNNERS.md).
-
-### Interactive File Selection
-
-When multiple `.geese` files are found, you'll see an interactive selection:
-
-```
-? Select .geese files to process: (Press <space> to select, <a> to toggle all, <i> to invert selection)
-❯◯ code-review.geese (1.2 KB)
- ◯ documentation-update.geese (856 B)
- ◯ refactoring-assistant.geese (2.1 KB)
-```
-
-### Target File Selection
-
-When a `.geese` file matches multiple target files, you can select specific files:
-
-```
-? Select target files to process:
-❯◯ src/components/Button.jsx (4.5 KB)
- ◯ src/components/Input.jsx (3.2 KB)
- ◯ src/utils/helpers.js (8.1 KB)
-```
-
-## ⚙️ Configuration System
-
-Geese supports a configuration system that allows you to set default values for your .geese files. Configuration is stored in `~/.geese/config.json` and is automatically applied when creating new files.
-
-### Configuration Structure
-
-Configuration is organized by tool name (e.g., `goose`, `aider`):
-
-```json
-{
-  "goose": {
-    "model": "gpt-4",
-    "temperature": 0.7,
-    "recipe": "code-review",
-    "include": ["src/**/*.js", "lib/**/*.js"],
-    "exclude": ["node_modules/**", "*.test.js"]
-  },
-  "defaultTool": "goose"
-}
-```
-
-### Setting Configuration
-
-Use the `geese config` command to manage your configuration:
-
-```bash
-# Set individual properties
-geese config --set goose.model gpt-4
-geese config --set goose.temperature 0.7
-
-# Set arrays (use JSON format)
-geese config --set goose.include '["src/**/*.js", "lib/**/*.js"]'
-
-# Set nested objects (use dot notation)
-geese config --set goose.max_tokens 2000
-```
-
-### Getting Configuration
-
-```bash
-# View all configuration
-geese config --list
-
-# Get a specific value
-geese config --get goose.model
-
-# Get a nested object
-geese config --get goose
-```
-
-### How Configuration is Applied
-
-When you create a new .geese file with `geese new`, the tool:
-
-1. Loads the default frontmatter from the tool's template
-2. Merges it with configuration from `~/.geese/config.json` for that tool
-3. Writes the combined configuration to the new file
-
-This allows you to set project-wide or machine-wide defaults without manually editing each file.
-
-## 📊 Reports
-
-Geese automatically generates comprehensive markdown reports for each processing session:
+Automatic markdown reports for every session:
 
 ```
 ./logs/geese_session_2024-01-15T14-30-22-123Z.log.md
 ```
 
-### Report Contents
+Includes:
+- Summary table of all processed files
+- Full prompts and AI responses
+- Token usage and timing
+- Configuration details
 
-- **Summary Table**: Overview of all processed files
-- **Session Details**: For each file:
-  - Goose configuration used
-  - Context variables and values
-  - Generated prompt
-  - AI response
-  - Token usage (when available)
-  - Processing duration
+**→ [Reports Guide](docs/REPORTS.md)** - Customize report output
 
-### Sample Report Structure
+## 📖 Examples
 
-```markdown
-# Geese Processing Report
-
-**Generated:** 2024-01-15T14:30:22.123Z
-**Total Sessions:** 3
-**Total Duration:** 15,432ms
-
-## Summary
-
-| Geese File | Target File | Duration | Status |
-|------------|-------------|----------|---------|
-| code-review.geese | Button.jsx | 5,123ms | ✅ Success |
-| code-review.geese | Input.jsx | 4,891ms | ✅ Success |
-| code-review.geese | helpers.js | 5,418ms | ✅ Success |
-
-## Session 1: code-review.geese → Button.jsx
-
-**Start Time:** 2024-01-15T14:30:22.123Z
-**Duration:** 5,123ms
-**Status:** Success
-
-### Goose Configuration
-
-```json
-{
-  "temperature": 0.7,
-  "max_tokens": 2000
-}
-```
-
-### Context Variables
-
-```json
-{
-  "filename": "Button.jsx",
-  "project_name": "My Awesome Project",
-  "review_focus": "performance and security"
-}
-```
-
-... (detailed prompt, response, and token info)
-```
-
-## 🔧 Development
-
-### Local Development Setup
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd geese
-
-# Install dependencies
-npm install
-
-# Create a symlink for global testing
-npm link
-
-# Run the tool locally
-geese --help
-```
-
-### Project Structure
-
-```
-geese/
-├── bin/
-│   └── geese.js          # CLI entry point
-├── src/
-│   ├── geese-parser.js   # .geese file parser
-│   ├── goose-runner.js   # Goose process executor
-│   └── report-generator.js # Report generator
-├── lib/                  # Additional utilities
-├── package.json
-└── README.md
-```
-
-### Running Tests
-
-```bash
-npm test
-```
-
-### Example .geese Files
-
-#### Log Analysis with Text Operations
-
+### Code Review
 ```yaml
 ---
-_include:
-  - "logs/**/*.log"
-_recipe: "analyze-logs"
-error_lines: "./app.log" ~> readFile ~> grep "^ERROR"
-error_count: "./app.log" ~> readFile ~> grepCount "ERROR"
-warning_count: "./app.log" ~> readFile ~> grepCount "WARNING"
-first_error: "./app.log" ~> readFile ~> grepFirst "^ERROR"
----
-
-Log Analysis Report for {{filename}}
-
-Total Errors: {{error_count}}
-Total Warnings: {{warning_count}}
-First Error: {{first_error}}
-
-All Error Lines:
-{{error_lines}}
-
-Please analyze these errors and suggest fixes.
-```
-
-#### JSON Data Processing with jq Operations
-
-```yaml
----
-_include:
-  - "data/**/*.json"
-_recipe: "process-json"
-user_names: "{{content}}" ~> parseJson ~> jqSelect users ~> jqMap name
-active_users: "{{content}}" ~> parseJson ~> jqSelect users ~> jqFilter status == active
-user_count: "{{content}}" ~> parseJson ~> jqSelect users ~> jqLength
-has_admin: "{{content}}" ~> parseJson ~> jqHas admin
----
-
-JSON Data Summary for {{filename}}
-
-Total Users: {{user_count}}
-Has Admin Field: {{has_admin}}
-
-Active Users: {{active_users}}
-
-User Names: {{user_names}}
-
-Please analyze this user data and provide insights.
-```
-
-#### File Filtering with Glob Operations
-
-```yaml
----
-_include:
-  - "src/**/*"
-_recipe: "process-files"
-# Example using glob operations in template (if you have a list of files)
-js_files: '["src/app.js", "src/test.ts", "src/main.js"]' ~> parseJson ~> globFilter "*.js"
-non_test_files: '["app.test.js", "main.js", "util.spec.js"]' ~> parseJson ~> globFilter "*.test.js" exclude
----
-
-Processing file: {{filename}}
-
-JS Files: {{js_files}}
-Non-Test Files: {{non_test_files}}
-
-File content:
-{{content}}
-```
-
-#### Code Review Template
-
-```yaml
----
-_include:
-  - "src/**/*.js"
-  - "src/**/*.jsx"
-_exclude:
-  - "*.test.js"
-  - "node_modules/**"
+_include: ["src/**/*.js"]
+_exclude: ["*.test.js"]
 _recipe: "code-review"
 _temperature: 0.3
-review_type: "security and performance"
 ---
-
-Please perform a {{review_type}} review of the following file.
-
-File: {{filename}}
-Size: {{content.length}} characters
-
-Focus areas:
-- Security vulnerabilities
-- Performance optimizations
-- Code quality
-- Best practices
-
-Code to review:
+Review {{filename}} for security and performance.
 {{content}}
-
-Please provide:
-1. Security issues found
-2. Performance recommendations
-3. Code quality improvements
-4. Overall assessment
 ```
 
-#### Documentation Generator
-
+### Log Analysis
 ```yaml
 ---
-_include:
-  - "src/**/*.js"
-  - "src/**/*.ts"
-_exclude:
-  - "*.test.js"
-  - "dist/**"
-_recipe: "documentation"
-_model: "gpt-4"
-_temperature: 0.1
-project: "My Library"
-version: "2.1.0"
+_include: ["logs/**/*.log"]
+_recipe: "analyze-logs"
+errors: "{{filepath}}" ~> readFile ~> grepCount "ERROR"
 ---
-
-Generate comprehensive documentation for this {{project}} source file.
-
-File: {{filename}}
-Path: {{filepath}}
-
-Source Code:
-{{content}}
-
-Please provide:
-1. File overview and purpose
-2. Function/class documentation
-3. Parameter descriptions
-4. Return value documentation
-5. Usage examples
-6. Dependencies and requirements
-
-Format the output in Markdown suitable for inclusion in API docs.
+Found {{errors}} errors in {{filename}}. Analyze and suggest fixes.
 ```
+
+### JSON Processing
+```yaml
+---
+_include: ["data/**/*.json"]
+_recipe: "process-json"
+users: "{{content}}" ~> parseJson ~> jqSelect users ~> jqMap name
+---
+User summary for {{filename}}: {{users}}
+```
+
+**→ [More Examples](examples/)** - Real-world use cases
+
+## 📚 Documentation
+
+Complete guides for each feature:
+
+- **[Getting Started](docs/GETTING_STARTED.md)** - Detailed walkthrough
+- **[File Format](docs/FILE_FORMAT.md)** - .geese file syntax
+- **[Pipes Reference](docs/PIPES.md)** - All built-in operations
+- **[Custom Pipes](docs/CUSTOM_PIPES.md)** - Build your own
+- **[Custom Runners](docs/CUSTOM_RUNNERS.md)** - Integrate other AI tools
+- **[Configuration](docs/CONFIGURATION.md)** - Multi-level config system
+- **[CLI Reference](docs/CLI.md)** - All commands
+- **[Reports](docs/REPORTS.md)** - Output customization
 
 ## 🐛 Troubleshooting
 
-### Common Issues
-
-1. **"goose not found in PATH"**
-   - Ensure Goose is installed and accessible
-   - Use `-g` option to specify custom path: `geese -g /path/to/goose`
-
-2. **No .geese files found**
-   - Check that files have `.geese` extension
-   - Verify you're in the correct directory
-   - Use `-f` to specify a specific file
-
-3. **Template rendering errors**
-   - Check Handlebars syntax in your template
-   - Verify all required frontmatter properties are present
-   - Use `--dry-run` to preview generated prompts
-
-### Debug Mode
-
-Use the `--dry-run` flag to see what would be processed without executing Goose:
-
 ```bash
+# Preview without running
 geese --dry-run
+
+# Check what's installed
+geese pipe list
+geese runner list
+
+# Verify configuration
+geese config --list
 ```
 
-This will show:
-- Which .geese files would be processed
-- Which target files would be selected
-- Generated prompts for each file
+**Common issues:**
+- **"goose not found"**: Use `geese -g /path/to/goose`
+- **No files matched**: Check glob patterns with `--dry-run`
+- **Template errors**: Verify Handlebars syntax
 
-## 🤝 Contributing
+**→ [Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Detailed solutions
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+## 🔗 Resources
+
+- [Goose AI Assistant](https://github.com/block/goose) - Default AI tool
+- [Handlebars.js](https://handlebarsjs.com/) - Template engine
+- [Glob Patterns](https://github.com/isaacs/node-glob#glob-primer) - File matching syntax
 
 ## 📄 License
 
 ISC License - see LICENSE file for details.
-
-## 🔗 Related Tools
-
-- [Goose AI Assistant](https://github.com/block/goose) - The AI assistant this tool integrates with
-- [Handlebars.js](https://handlebarsjs.com/) - Template engine used for prompt generation
-- [Commander.js](https://github.com/tj/commander.js) - CLI framework
-- [Inquirer.js](https://github.com/SBoudrias/Inquirer.js) - Interactive command line prompts
