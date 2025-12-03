@@ -172,7 +172,7 @@ Count: {{count}}
     assertEquals(context.count, 42, 'parseInt should convert to number');
   });
 
-  // Test 6: Pipe operations inherit from base config
+  // Test 6: Pipe operations work with base config and .geese file overrides base config
   test('Pipe operations work with base config', () => {
     const geeseFile = path.join(TEST_DIR, 'inherit-pipes.geese');
     const content = `---

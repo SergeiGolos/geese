@@ -10,7 +10,9 @@
     "start": "node bin/geese.js",
     "dev": "node bin/geese.js",
     "setup": "node setup-dev.js",
-    "test": "node test-cli.js && node test-pipes.js && node test-schema-validator.js && node test-interfaces.js && node test-container.js && node test-event-emitter.js && node test-security.js && node test-runners.js && node test-runner-cli.js && node test/integration/full-workflow.test.js && node test/integration/config-hierarchy.test.js && node test/integration/pipe-inheritance.test.js && node test/integration/multi-file-processing.test.js"
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "node test-cli.js && node test-pipes.js && node test-schema-validator.js && node test-interfaces.js && node test-container.js && node test-event-emitter.js && node test-security.js && node test-runners.js && node test-runner-cli.js",
+    "test:integration": "node test/integration/full-workflow.test.js && node test/integration/config-hierarchy.test.js && node test/integration/pipe-inheritance.test.js && node test/integration/multi-file-processing.test.js"
   },
   "keywords": ["cli", "ai", "file-processing", "automation", "goose"],
   "author": "",

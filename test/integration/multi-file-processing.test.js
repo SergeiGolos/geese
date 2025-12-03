@@ -21,9 +21,9 @@ let failCount = 0;
 
 const TEST_DIR = path.join(os.tmpdir(), 'geese-multi-file-test');
 
-function test(description, fn) {
+async function test(description, fn) {
   try {
-    fn();
+    await fn();
     console.log(`${GREEN}✓${RESET} ${description}`);
     passCount++;
   } catch (error) {
@@ -72,6 +72,7 @@ console.log(chalk.bold('\n🧪 Running Multi-File Processing Integration Tests\n
 
 setup();
 
+(async () => {
 try {
   // Create test file structure
   const srcDir = path.join(TEST_DIR, 'src');
@@ -94,7 +95,7 @@ try {
   fs.writeFileSync(path.join(distDir, 'bundle.js'), '// dist/bundle.js');
 
   // Test 1: Include pattern matches files
-  test('Include pattern matches expected files', () => {
+  await test('Include pattern matches expected files', () => {
     const parser = new GeeseParser();
     const files = parser.collectTargetFiles(
       { $include: ['src/**/*.js'], $exclude: [] },
@@ -107,7 +108,7 @@ try {
   });
 
   // Test 2: Exclude pattern filters files
-  test('Exclude pattern filters out files', () => {
+  await test('Exclude pattern filters out files', () => {
     const parser = new GeeseParser();
     const files = parser.collectTargetFiles(
       { $include: ['**/*.js'], $exclude: ['**/*.test.js', '**/*.spec.js'] },
@@ -121,7 +122,7 @@ try {
   });
 
   // Test 3: Multiple include patterns
-  test('Multiple include patterns work together', () => {
+  await test('Multiple include patterns work together', () => {
     const parser = new GeeseParser();
     const files = parser.collectTargetFiles(
       { $include: ['src/**/*.js', 'lib/**/*.js'], $exclude: [] },
@@ -135,7 +136,7 @@ try {
   });
 
   // Test 4: Multiple exclude patterns
-  test('Multiple exclude patterns work together', () => {
+  await test('Multiple exclude patterns work together', () => {
     const parser = new GeeseParser();
     const files = parser.collectTargetFiles(
       {
@@ -152,7 +153,7 @@ try {
   });
 
   // Test 5: TypeScript files can be included
-  test('TypeScript files can be included', () => {
+  await test('TypeScript files can be included', () => {
     const parser = new GeeseParser();
     const files = parser.collectTargetFiles(
       { $include: ['src/**/*.ts'], $exclude: [] },
@@ -164,18 +165,18 @@ try {
   });
 
   // Test 6: Multiple file types in single pattern
-  test('Multiple file types in single pattern', () => {
+  await test('Multiple file types in single pattern', () => {
     const parser = new GeeseParser();
     const files = parser.collectTargetFiles(
       { $include: ['src/**/*.js', 'src/**/*.ts'], $exclude: [] },
       TEST_DIR
     );
     
-    assertEquals(files.length >= 2, true, 'Should find JS and TS files');
+    assertEquals(files.length, 3, 'Should find 3 files (2 JS + 1 TS)');
   });
 
   // Test 7: .geese file with include/exclude patterns
-  test('.geese file with include/exclude patterns', () => {
+  await test('.geese file with include/exclude patterns', () => {
     const geeseFile = path.join(TEST_DIR, 'test.geese');
     const content = `---
 $include:
@@ -200,7 +201,7 @@ Review this file: {{filename}}
   });
 
   // Test 8: Process multiple files in sequence
-  test('Process multiple files in sequence', () => {
+  await test('Process multiple files in sequence', () => {
     const geeseFile = path.join(TEST_DIR, 'review.geese');
     const content = `---
 $include:
@@ -238,7 +239,7 @@ Review: {{filename}}
   });
 
   // Test 9: Empty include/exclude arrays
-  test('Empty include/exclude arrays', () => {
+  await test('Empty include/exclude arrays', () => {
     const parser = new GeeseParser();
     
     // Empty include should return empty
@@ -247,7 +248,7 @@ Review: {{filename}}
   });
 
   // Test 10: Nested directory patterns
-  test('Nested directory patterns work', () => {
+  await test('Nested directory patterns work', () => {
     const deepDir = path.join(srcDir, 'components', 'ui');
     fs.ensureDirSync(deepDir);
     fs.writeFileSync(path.join(deepDir, 'button.js'), '// button component');
@@ -263,7 +264,7 @@ Review: {{filename}}
   });
 
   // Test 11: Exclude directory excludes all contents
-  test('Exclude directory excludes all contents', () => {
+  await test('Exclude directory excludes all contents', () => {
     const parser = new GeeseParser();
     const files = parser.collectTargetFiles(
       { $include: ['**/*.js'], $exclude: ['dist/**', 'test/**'] },
@@ -276,7 +277,7 @@ Review: {{filename}}
   });
 
   // Test 12: Discover .geese files in hierarchy
-  test('Discover .geese files in hierarchy', async () => {
+  await test('Discover .geese files in hierarchy', async () => {
     const geeseDir = path.join(TEST_DIR, '.geese');
     fs.ensureDirSync(geeseDir);
     fs.writeFileSync(path.join(geeseDir, 'local.geese'), '---\n$recipe: "test"\n---\nTest');
@@ -299,7 +300,7 @@ Review: {{filename}}
   });
 
   // Test 13: Context prepared for each file
-  test('Context prepared correctly for each file', () => {
+  await test('Context prepared correctly for each file', () => {
     const geeseFile = path.join(TEST_DIR, 'multi.geese');
     const content = `---
 $include:
@@ -324,7 +325,7 @@ Project: {{project}}
   });
 
   // Test 14: File processing respects patterns from config
-  test('File processing respects patterns from config', () => {
+  await test('File processing respects patterns from config', () => {
     const geeseFile = path.join(TEST_DIR, 'config-patterns.geese');
     const content = `---
 $include:
@@ -369,3 +370,4 @@ console.log(`Failed: ${failCount}`);
 console.log('='.repeat(50) + '\n');
 
 process.exit(failCount > 0 ? 1 : 0);
+})();

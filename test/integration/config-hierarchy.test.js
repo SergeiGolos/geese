@@ -22,9 +22,9 @@ const TEST_DIR = path.join(os.tmpdir(), 'geese-config-hierarchy-test');
 const GLOBAL_CONFIG_DIR = path.join(os.homedir(), '.geese');
 const BACKUP_CONFIG_DIR = path.join(os.homedir(), '.geese-backup-hierarchy');
 
-function test(description, fn) {
+async function test(description, fn) {
   try {
-    fn();
+    await fn();
     console.log(`${GREEN}✓${RESET} ${description}`);
     passCount++;
   } catch (error) {
@@ -41,12 +41,6 @@ function assertEquals(actual, expected, message) {
       `  Expected: ${JSON.stringify(expected)}\n` +
       `  Actual: ${JSON.stringify(actual)}`
     );
-  }
-}
-
-function assertNotEquals(actual, notExpected, message) {
-  if (JSON.stringify(actual) === JSON.stringify(notExpected)) {
-    throw new Error(`${message || 'Values should not be equal'}`);
   }
 }
 
@@ -87,9 +81,10 @@ console.log(chalk.bold('\n🧪 Running Configuration Hierarchy Integration Tests
 
 setup();
 
+(async () => {
 try {
   // Test 1: Core defaults exist
-  test('Core defaults are defined', async () => {
+  await test('Core defaults are defined', async () => {
     const configManager = new ConfigManager();
     const coreDefaults = configManager.getCoreDefaults();
     
@@ -102,7 +97,7 @@ try {
   });
 
   // Test 2: Global config overrides core defaults
-  test('Global config overrides core defaults', async () => {
+  await test('Global config overrides core defaults', async () => {
     const configManager = new ConfigManager();
     
     // Create global config
@@ -124,7 +119,7 @@ try {
   });
 
   // Test 3: Local config overrides global config
-  test('Local config overrides global config', async () => {
+  await test('Local config overrides global config', async () => {
     const configManager = new ConfigManager();
     
     // Create global config
@@ -156,7 +151,7 @@ try {
   });
 
   // Test 4: .geese file config overrides local config
-  test('.geese file config overrides local config', async () => {
+  await test('.geese file config overrides local config', async () => {
     const configManager = new ConfigManager();
     
     // Setup configs
@@ -181,7 +176,7 @@ try {
   });
 
   // Test 5: CLI args override all configs
-  test('CLI args override all configs', async () => {
+  await test('CLI args override all configs', async () => {
     const configManager = new ConfigManager();
     
     // Setup all config levels
@@ -204,7 +199,7 @@ try {
   });
 
   // Test 6: Hierarchy metadata is correct
-  test('Hierarchy metadata is tracked correctly', async () => {
+  await test('Hierarchy metadata is tracked correctly', async () => {
     const configManager = new ConfigManager();
     
     const globalConfig = { goose: { model: 'gpt-4-turbo' } };
@@ -222,7 +217,7 @@ try {
   });
 
   // Test 7: Deep merge works correctly
-  test('Deep merge merges nested objects', async () => {
+  await test('Deep merge merges nested objects', async () => {
     const configManager = new ConfigManager();
     
     const obj1 = {
@@ -255,7 +250,7 @@ try {
   });
 
   // Test 8: Arrays are replaced, not merged
-  test('Arrays are replaced, not merged', async () => {
+  await test('Arrays are replaced, not merged', async () => {
     const configManager = new ConfigManager();
     
     const obj1 = {
@@ -277,7 +272,7 @@ try {
   });
 
   // Test 9: Configuration sources are tracked
-  test('Configuration sources are tracked', async () => {
+  await test('Configuration sources are tracked', async () => {
     const configManager = new ConfigManager();
     
     const globalConfig = { goose: { model: 'gpt-4-turbo' } };
@@ -294,7 +289,7 @@ try {
   });
 
   // Test 10: Local config directory is discovered
-  test('Local config directory is discovered', async () => {
+  await test('Local config directory is discovered', async () => {
     const configManager = new ConfigManager();
     
     const localConfigDir = path.join(TEST_DIR, '.geese');
@@ -313,7 +308,7 @@ try {
   });
 
   // Test 11: Dangerous keys are rejected
-  test('Dangerous keys in config are rejected', async () => {
+  await test('Dangerous keys in config are rejected', async () => {
     const configManager = new ConfigManager();
     
     const dangerousConfig = {
@@ -328,7 +323,7 @@ try {
   });
 
   // Test 12: Full hierarchy without local config
-  test('Hierarchy works without local config', async () => {
+  await test('Hierarchy works without local config', async () => {
     const configManager = new ConfigManager();
     
     // Only set global config
@@ -355,3 +350,4 @@ console.log(`Failed: ${failCount}`);
 console.log('='.repeat(50) + '\n');
 
 process.exit(failCount > 0 ? 1 : 0);
+})();
