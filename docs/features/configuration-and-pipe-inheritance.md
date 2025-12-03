@@ -1251,9 +1251,9 @@ describe('End-to-End Configuration', () => {
 
 ### Files to Update
 
-1. **README.md**: Add section on hierarchical configuration
-2. **CONFIGURATION.md** (new): Detailed configuration guide
-3. **PIPE_OPERATIONS.md**: Add section on pipe inheritance
+1. **README.md**: ✅ Already includes hierarchical configuration section
+2. **FEATURES_OVERVIEW.md**: ✅ Comprehensive feature documentation
+3. **pipe-operations.md**: ✅ Complete pipe operations guide with inheritance
 4. **examples/**: Add example configurations at each level
 
 ### New Documentation Files
@@ -1307,9 +1307,9 @@ describe('End-to-End Configuration', () => {
 - [ ] Manual testing with real projects
 
 ### Phase 7: Documentation
-- [ ] Update README.md
-- [ ] Create CONFIGURATION.md
-- [ ] Update PIPE_OPERATIONS.md
+- [x] Update README.md (includes hierarchical configuration)
+- [x] Create feature documentation (FEATURES_OVERVIEW.md)
+- [x] Update pipe operations documentation (pipe-operations.md)
 - [ ] Create migration guide
 - [ ] Add inline code documentation
 - [ ] Create example configurations

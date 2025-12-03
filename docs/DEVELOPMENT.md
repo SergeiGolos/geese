@@ -46,21 +46,27 @@
 ```
 geese/
 ├── bin/
-│   └── geese.js              # CLI entry point
+│   ├── geese.js              # CLI entry point
+│   ├── commands/             # Command handlers
+│   └── utils/                # CLI utilities
 ├── src/
 │   ├── geese-parser.js       # .geese file parsing
 │   ├── goose-runner.js       # Goose AI integration
-│   └── report-generator.js   # Report generation
+│   ├── report-generator.js   # Report generation
+│   ├── container.js          # DI container
+│   ├── events/               # Event system
+│   ├── interfaces/           # Interface definitions
+│   ├── security/             # Security modules
+│   └── utils/                # Shared utilities
+├── docs/                     # Documentation
+│   ├── features/             # Feature documentation
+│   ├── adr/                  # Architecture decision records
+│   └── TESTING_GUIDE.md      # Testing methodology
 ├── examples/                 # Example .geese files
-│   ├── code-review.geese
-│   ├── documentation-generator.geese
-│   └── refactoring-assistant.geese
 ├── test-project/             # Test environment
-├── lib/                      # Additional utilities (future)
+├── test-*.js                 # Test suites
 ├── package.json
-├── README.md
-├── REQUIREMENTS.md
-└── DEVELOPMENT.md
+└── README.md
 ```
 
 ## 🧪 Development Workflow
@@ -279,10 +285,10 @@ npm publish --tag beta
 - Use PascalCase for classes: `GeeseParser`
 
 ### Comments and Documentation
-- Document function parameters and return values
+- Document function parameters and return values (use JSDoc)
 - Explain complex logic
 - Update README.md for user-facing changes
-- Update REQUIREMENTS.md for specification changes
+- Update feature documentation in docs/features/ for new features
 
 ## 🚀 Performance Considerations
 
@@ -306,7 +312,9 @@ npm publish --tag beta
 ## 🤝 Contributing
 
 ### Before Contributing
-1. Read REQUIREMENTS.md thoroughly
+1. Read README.md for project overview
+2. Review docs/ARCHITECTURE_GUIDE.md for architecture patterns
+3. Check docs/TESTING_GUIDE.md for testing methodology
 2. Understand the project architecture
 3. Set up development environment
 4. Test existing functionality
@@ -358,8 +366,11 @@ DEBUG=geese:* node bin/geese.js --dry-run test-project
 ## 📞 Getting Help
 
 ### Resources
-- **README.md**: General usage and documentation
-- **REQUIREMENTS.md**: Detailed specifications
+- **README.md**: General usage and getting started
+- **docs/features/FEATURES_OVERVIEW.md**: Complete feature reference
+- **docs/ARCHITECTURE_GUIDE.md**: Architecture patterns
+- **docs/TESTING_GUIDE.md**: Testing methodology
+- **docs/adr/**: Architecture decision records
 - **GitHub Issues**: Bug reports and feature requests
 - **NPM Page**: Package information and updates
 
