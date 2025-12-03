@@ -10,6 +10,7 @@
 ✅ **Completed Refactorings:**
 1. **bin/geese.js**: Reduced from 752 to 122 lines (84% reduction) - Section 2.1
 2. **DirectoryWalker**: Eliminated duplicate directory traversal code - Section 4.2
+3. **SchemaValidator**: Centralized validation logic, eliminated duplication - Section 4.3
 
 🔧 **In Progress:**
 - Remaining SRP violations in PipeOperations, ConfigManager, and Wizard classes
@@ -24,7 +25,7 @@ This document identifies technical debt, deep coupling issues, and areas for ref
 2. **Large Classes**: ~~4~~ **3** classes exceed 300 lines with multiple responsibilities (~~bin/geese.js: 747 lines~~, pipe-operations.js: 567 lines, config-manager.js: 349 lines, wizard.js: 361 lines)
 3. **God Object Patterns**: 3 singleton exports creating global state (tool-registry, pipe-operations, geese-file-finder)
 4. **Interface Violations**: Limited use of interfaces despite abstract base classes
-5. **Code Duplication**: ~~Validation, configuration merging, and directory walking logic~~ Validation and configuration merging logic duplicated across 2-3 files (~~directory walking resolved~~ - Section 4.2)
+5. **Code Duplication**: ~~Validation, configuration merging, and directory walking logic duplicated across 2-3 files~~ **✅ RESOLVED** - All major duplication addressed (Sections 4.2 and 4.3 completed)
 
 ---
 
@@ -881,52 +882,49 @@ class DirectoryWalker {
 
 ---
 
-### 4.3 Validation Logic Duplication
+### 4.3 Validation Logic Duplication **✅ RESOLVED**
 
-**Location:** Multiple classes validate frontmatter schema
+**Location:** `src/geese-parser.js` had hardcoded validation
 
-**Problem:**
-Schema validation appears in multiple forms across the codebase.
+**Status:** ✅ **RESOLVED** - Centralized in SchemaValidator utility
 
-**Proposed Solution:**
+**Original Problem:**
+Validation logic for frontmatter schema was hardcoded in `geese-parser.js` while schema definitions existed in `goose-runner.js` (and potentially other tool runners), leading to duplication and maintenance issues.
+
+**Implemented Solution:**
+
+Created `src/utils/schema-validator.js`:
 
 ```javascript
-// src/validation/schema-validator.js
 class SchemaValidator {
-  static validate(data, schema) {
-    const errors = [];
-    
-    // Check required fields
-    for (const field of schema.required || []) {
-      if (!(field in data)) {
-        errors.push(`Missing required field: ${field}`);
-      }
-    }
-    
-    // Validate field types
-    for (const [field, value] of Object.entries(data)) {
-      if (schema.types && schema.types[field]) {
-        if (!this.validateType(value, schema.types[field])) {
-          errors.push(`Invalid type for ${field}: expected ${schema.types[field]}`);
-        }
-      }
-    }
-    
-    return {
-      valid: errors.length === 0,
-      errors
-    };
-  }
-  
-  static validateType(value, expectedType) {
-    if (expectedType === 'array') return Array.isArray(value);
-    if (expectedType === 'string') return typeof value === 'string';
-    if (expectedType === 'number') return typeof value === 'number';
-    if (expectedType === 'boolean') return typeof value === 'boolean';
-    return true;
-  }
+  static validate(data, schema, options = {})
+  static validateOrThrow(data, schema, options = {})
+  static getFieldValue(data, field, allowPrefixVariants = true)
+  static validateType(value, expectedType, fieldName)
+  static createSchema(required, optional = [], types = {})
 }
 ```
+
+Updated `src/geese-parser.js` to use SchemaValidator:
+- Removed hardcoded validation logic
+- Now uses schema-based validation with `SchemaValidator.validateOrThrow()`
+- Supports both `$prefix` and non-prefixed field names
+- Allows custom schema to be passed in for different tool runners
+
+**Benefits Achieved:**
+- ✅ Eliminated hardcoded validation logic
+- ✅ Single source of truth for validation
+- ✅ Reusable across different schemas and tools
+- ✅ Comprehensive test coverage (15 tests)
+- ✅ Type validation support (array, string, number, boolean, object)
+- ✅ Support for required and optional fields
+- ✅ Backward compatible with existing code
+
+**Files Modified:**
+- `src/utils/schema-validator.js` - New utility class
+- `src/geese-parser.js` - Updated to use SchemaValidator
+- `test-schema-validator.js` - Comprehensive tests for SchemaValidator
+- `package.json` - Updated test script to include schema-validator tests
 
 ---
 

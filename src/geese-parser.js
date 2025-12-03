@@ -4,6 +4,7 @@ const matter = require('gray-matter');
 const Handlebars = require('handlebars');
 const glob = require('glob');
 const PipeOperations = require('./pipe-operations');
+const SchemaValidator = require('./utils/schema-validator');
 
 // System properties that control geese behavior (use $ prefix for visual distinction)
 const SYSTEM_PROPERTIES = [
@@ -292,20 +293,34 @@ class GeeseParser {
   }
 
   /**
-   * Validate .geese file structure
+   * Validate .geese file structure using schema validation
    * @param {Object} frontmatter - Frontmatter to validate
+   * @param {Object} [schema] - Optional schema to validate against. If not provided, uses default schema.
    * @returns {boolean} True if valid
+   * @throws {Error} If validation fails
    */
-  validateGeeseFile(frontmatter) {
-    // Check for required fields (support both $ prefix and no prefix)
-    const include = frontmatter.$include || frontmatter.include;
-    if (!include || !Array.isArray(include)) {
-      throw new Error('.geese file must have an "$include" (or "include") array');
-    }
+  validateGeeseFile(frontmatter, schema = null) {
+    // Default schema for .geese files (matches goose-runner requirements)
+    const defaultSchema = SchemaValidator.createSchema(
+      ['include', 'recipe'],  // required fields
+      ['exclude', 'model', 'temperature', 'max_tokens', 'flags'],  // optional fields
+      {
+        include: 'array',
+        exclude: 'array',
+        recipe: 'string'
+      }
+    );
     
-    const recipe = frontmatter.$recipe || frontmatter.recipe;
-    if (!recipe) {
-      throw new Error('.geese file must have a "$recipe" (or "recipe") property');
+    const validationSchema = schema || defaultSchema;
+    
+    const result = SchemaValidator.validate(frontmatter, validationSchema, {
+      allowPrefixVariants: true  // Support both $include and include
+    });
+    
+    if (!result.valid) {
+      // Create .geese-specific error message from validation errors
+      const errorList = result.errors.join('; ');
+      throw new Error(`.geese file validation failed: ${errorList}`);
     }
     
     return true;
