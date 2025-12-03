@@ -87,8 +87,16 @@ The Event System enables loose coupling through the Observer pattern.
 ```javascript
 const EventEmitter = require('./src/events/event-emitter');
 
-// Create event emitter
-const events = new EventEmitter();
+// Create event emitter (with optional custom error logger)
+const events = new EventEmitter({
+  errorLogger: (message, error) => {
+    // Custom error logging (defaults to console.error)
+    myLogger.error(message, error);
+  }
+});
+
+// Or use default console.error
+const events2 = new EventEmitter();
 
 // Register listeners
 events.on('file:processing', (data) => {
@@ -154,6 +162,7 @@ events.on('error', ({ event, error, data }) => {
 
 ### API Reference
 
+- `constructor(options?)` - Create EventEmitter with optional custom error logger
 - `on(event, listener)` - Register a listener
 - `once(event, listener)` - Register a one-time listener
 - `off(event, listener)` - Remove a listener

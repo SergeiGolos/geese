@@ -202,15 +202,15 @@ events14.emit('self:remove');
 assertEquals(emitCount, 1, 'Self-removing listener only called once');
 
 // Test: Error in error listener doesn't cause infinite recursion
-const events15 = new EventEmitter();
 let errorListenerCallCount = 0;
-const consoleErrors = [];
+const loggedErrors = [];
 
-// Mock console.error to capture errors
-const originalConsoleError = console.error;
-console.error = (...args) => {
-  consoleErrors.push(args);
-};
+// Create emitter with custom error logger
+const events15 = new EventEmitter({
+  errorLogger: (...args) => {
+    loggedErrors.push(args);
+  }
+});
 
 // Error listener that throws
 events15.on('error', () => {
@@ -226,12 +226,9 @@ events15.on('throw:event', () => {
 // Emit event - should not cause infinite recursion
 events15.emit('throw:event');
 
-// Restore console.error
-console.error = originalConsoleError;
-
 assertEquals(errorListenerCallCount, 1, 'Error listener called exactly once (no infinite recursion)');
-assert(consoleErrors.length > 0 && consoleErrors[0][0] === 'Error in error event listener:', 
-  'Fallback console.error called when error listener throws');
+assert(loggedErrors.length > 0 && loggedErrors[0][0].includes('Error in error event listener'), 
+  'Custom error logger called when error listener throws');
 
 // Print summary
 console.log('\n' + '='.repeat(50));

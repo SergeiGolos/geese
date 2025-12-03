@@ -19,9 +19,13 @@
 class EventEmitter {
   /**
    * Create a new EventEmitter
+   * 
+   * @param {Object} [options={}] - Configuration options
+   * @param {Function} [options.errorLogger] - Custom error logger function (defaults to console.error)
    */
-  constructor() {
+  constructor(options = {}) {
     this.listeners = new Map();
+    this.errorLogger = options.errorLogger || console.error.bind(console);
   }
   
   /**
@@ -144,8 +148,8 @@ class EventEmitter {
           this.emit('error', { event, error, data });
         } else {
           // If we're already handling an error event and the listener throws,
-          // log to console to avoid infinite recursion
-          console.error('Error in error event listener:', error);
+          // log using error logger to avoid infinite recursion
+          this.errorLogger('Error in error event listener:', error);
         }
       }
     }
