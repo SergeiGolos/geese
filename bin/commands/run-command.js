@@ -268,7 +268,8 @@ async function runCommand(container, directory, options) {
       // Collect target files
       const targetFiles = parser.collectTargetFiles(
         geeseData.frontmatter,
-        path.dirname(geeseFile)
+        path.dirname(geeseFile),
+        geeseData.filename
       );
       
       if (targetFiles.length === 0) {

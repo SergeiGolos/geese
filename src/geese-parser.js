@@ -202,14 +202,81 @@ class GeeseParser {
 
   /**
    * Collect target files based on include/exclude patterns
+   * Supports templates and pipes in patterns using hidden system variables
    * @param {Object} frontmatter - Frontmatter from .geese file
    * @param {string} baseDir - Base directory for file collection
+   * @param {string} geeseFileName - Name of the .geese file (for hidden variables)
    * @returns {Array} Array of target file paths
    */
-  collectTargetFiles(frontmatter, baseDir) {
+  collectTargetFiles(frontmatter, baseDir, geeseFileName = '') {
     // Support both _ prefix and no prefix for backward compatibility
-    const include = frontmatter._include || frontmatter.$include || frontmatter.include || [];
-    const exclude = frontmatter._exclude || frontmatter.$exclude || frontmatter.exclude || [];
+    let include = frontmatter._include || frontmatter.$include || frontmatter.include || [];
+    let exclude = frontmatter._exclude || frontmatter.$exclude || frontmatter.exclude || [];
+    
+    // Create minimal context with hidden system variables for template/pipe evaluation
+    const hiddenSystemContext = {
+      geese_file: geeseFileName,
+      working_dir: process.cwd()
+    };
+    
+    // Process include patterns if they contain templates or pipes
+    if (typeof include === 'string') {
+      // If include is a string (with templates/pipes), process it
+      let processedInclude = include;
+      
+      if (processedInclude.includes('{{')) {
+        processedInclude = this.renderTemplate(processedInclude, hiddenSystemContext);
+      }
+      
+      if (processedInclude.includes('~>')) {
+        processedInclude = this.pipeOperations.executePipeChain(processedInclude, hiddenSystemContext);
+      }
+      
+      // Convert to array if needed
+      include = Array.isArray(processedInclude) ? processedInclude : [processedInclude];
+    } else if (Array.isArray(include)) {
+      // Process each pattern individually
+      include = include.map(pattern => {
+        if (typeof pattern !== 'string') return pattern;
+        
+        let processed = pattern;
+        if (processed.includes('{{')) {
+          processed = this.renderTemplate(processed, hiddenSystemContext);
+        }
+        if (processed.includes('~>')) {
+          processed = this.pipeOperations.executePipeChain(processed, hiddenSystemContext);
+        }
+        return processed;
+      });
+    }
+    
+    // Process exclude patterns if they contain templates or pipes
+    if (typeof exclude === 'string') {
+      let processedExclude = exclude;
+      
+      if (processedExclude.includes('{{')) {
+        processedExclude = this.renderTemplate(processedExclude, hiddenSystemContext);
+      }
+      
+      if (processedExclude.includes('~>')) {
+        processedExclude = this.pipeOperations.executePipeChain(processedExclude, hiddenSystemContext);
+      }
+      
+      exclude = Array.isArray(processedExclude) ? processedExclude : [processedExclude];
+    } else if (Array.isArray(exclude)) {
+      exclude = exclude.map(pattern => {
+        if (typeof pattern !== 'string') return pattern;
+        
+        let processed = pattern;
+        if (processed.includes('{{')) {
+          processed = this.renderTemplate(processed, hiddenSystemContext);
+        }
+        if (processed.includes('~>')) {
+          processed = this.pipeOperations.executePipeChain(processed, hiddenSystemContext);
+        }
+        return processed;
+      });
+    }
     
     let allFiles = [];
     
