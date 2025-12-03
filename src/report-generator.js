@@ -205,9 +205,10 @@ class ReportGenerator extends IReportGenerator {
    * Save sessions report to a file
    * @param {Array<Object>} sessions - Array of session objects to report
    * @param {string} [customFilename] - Custom filename
+   * @param {boolean} [silent=false] - Whether to suppress console output
    * @returns {Promise<Object>} Object with filename, filePath, and size
    */
-  async saveReport(sessions, customFilename = null) {
+  async saveReport(sessions, customFilename = null, silent = false) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = customFilename || this.generateFilename('geese_session', timestamp);
     const filePath = path.join(this.outputDir, filename);
@@ -216,7 +217,9 @@ class ReportGenerator extends IReportGenerator {
     
     await fs.writeFile(filePath, report, 'utf8');
     
-    console.log(chalk.green(`📄 Report saved to: ${filePath}`));
+    if (!silent) {
+      console.log(chalk.green(`📄 Report saved to: ${filePath}`));
+    }
     
     return {
       filename,

@@ -20,7 +20,7 @@ const container = createContainer();
 // Import command handlers
 const configCommand = require('./commands/config-command');
 const newCommand = require('./commands/new-command');
-const runCommand = require('./commands/run-command');
+const runCommand = require('./commands/run-command-simple');
 const { launchEditor } = require('./utils/editor-launcher');
 
 const program = new Command();
