@@ -82,10 +82,11 @@ class PipeCLI {
 
   /**
    * List all available pipe operations
+   * @param {Container} container - Service container
+   * @param {boolean} showSources - Whether to show operation sources
    */
-  static async listPipes(showSources = false) {
-    const PipeOperations = require('./pipe-operations');
-    const pipeOps = new PipeOperations();
+  static async listPipes(container, showSources = false) {
+    const pipeOps = container.get('pipeOperations');
     
     console.log(chalk.bold('\n📦 Available Pipe Operations\n'));
 

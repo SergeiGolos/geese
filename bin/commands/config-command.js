@@ -1,15 +1,17 @@
 const path = require('path');
 const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
-const ConfigManager = require('../../src/config-manager');
 const { launchEditor } = require('../utils/editor-launcher');
 
 /**
  * Config command handler
  * Manages configuration settings including global and local configurations
+ * 
+ * @param {Container} container - Service container
+ * @param {Object} options - Command options
  */
-async function configCommand(options) {
-  const configManager = new ConfigManager();
+async function configCommand(container, options) {
+  const configManager = container.get('configManager');
 
   if (options.edit) {
     const configPath = configManager.getConfigPath();
