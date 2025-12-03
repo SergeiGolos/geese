@@ -31,6 +31,7 @@ class PipeCLI {
    * Create a new custom pipe operation
    * @param {string} name - Name of the pipe operation
    * @param {Object} options - Command options
+   * @returns {string} Path to the created pipe file
    */
   static async createPipe(name, options) {
     try {
@@ -56,7 +57,7 @@ class PipeCLI {
 
         if (!overwrite) {
           console.log(chalk.yellow('Cancelled.'));
-          return;
+          return null;
         }
       }
 
@@ -71,6 +72,8 @@ class PipeCLI {
       console.log();
       console.log('Edit the file to implement your custom operation.');
       console.log('The pipe will be automatically loaded when geese runs.');
+      
+      return pipeFile;
     } catch (error) {
       console.error(chalk.red('Error creating pipe:'), error.message);
       process.exit(1);

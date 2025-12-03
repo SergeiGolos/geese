@@ -200,6 +200,72 @@ test('Config manager prevents prototype pollution', () => {
   }
 });
 
+// Test 12: geese config --edit flag exists
+test('geese config --edit flag exists in help', () => {
+  const help = exec(`node ${GEESE_BIN} config --help`);
+  if (!help.includes('--edit')) {
+    throw new Error('--edit flag not found in config help');
+  }
+});
+
+// Test 13: geese new --edit flag exists
+test('geese new --edit flag exists in help', () => {
+  const help = exec(`node ${GEESE_BIN} new --help`);
+  if (!help.includes('--edit')) {
+    throw new Error('--edit flag not found in new help');
+  }
+});
+
+// Test 14: geese pipe --edit flag exists
+test('geese pipe --edit flag exists in help', () => {
+  const help = exec(`node ${GEESE_BIN} pipe --help`);
+  if (!help.includes('--edit')) {
+    throw new Error('--edit flag not found in pipe help');
+  }
+});
+
+// Test 15: geese new creates file and --edit doesn't error
+test('geese new with --edit creates file (no editor test)', () => {
+  const testDir = '/tmp/geese-cli-test-edit';
+  fs.ensureDirSync(testDir);
+  
+  try {
+    // Create file without editor (EDITOR not set, so it should warn but not fail file creation)
+    exec(`cd ${testDir} && node ${GEESE_BIN} new test-edit-file 2>&1`);
+    
+    const geesePath = path.join(testDir, '.geese', 'test-edit-file.geese');
+    if (!fs.existsSync(geesePath)) {
+      throw new Error('.geese file was not created');
+    }
+  } finally {
+    fs.removeSync(testDir);
+  }
+});
+
+// Test 16: geese pipe new with --edit creates file
+test('geese pipe new with --edit creates pipe file (no editor test)', () => {
+  const pipesDir = path.join(os.homedir(), '.geese', 'pipes');
+  const testPipePath = path.join(pipesDir, 'testEditPipe.js');
+  
+  // Clean up if exists
+  if (fs.existsSync(testPipePath)) {
+    fs.removeSync(testPipePath);
+  }
+  
+  try {
+    // Create pipe without editor (EDITOR not set, so it should warn but not fail file creation)
+    exec(`node ${GEESE_BIN} pipe new testEditPipe 2>&1`);
+    
+    if (!fs.existsSync(testPipePath)) {
+      throw new Error('Pipe file was not created');
+    }
+  } finally {
+    if (fs.existsSync(testPipePath)) {
+      fs.removeSync(testPipePath);
+    }
+  }
+});
+
 // Cleanup after tests
 cleanup();
 

@@ -6,6 +6,7 @@ const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
 const inquirer = require('inquirer').default || require('inquirer');
 const matter = require('gray-matter');
+const { spawn } = require('child_process');
 
 // Import our modules
 const ConfigManager = require('../src/config-manager');
@@ -17,6 +18,96 @@ const GeeseFileFinder = require('../src/geese-file-finder');
 const CLIArgumentParser = require('../src/cli-argument-parser');
 
 const program = new Command();
+
+/**
+ * Launch file editor for a given file path
+ * Uses $VISUAL or $EDITOR environment variable, or falls back to common editors
+ * @param {string} filePath - Path to file to edit
+ * @returns {Promise<void>}
+ */
+async function launchEditor(filePath) {
+  // Determine editor to use
+  const editor = process.env.VISUAL || process.env.EDITOR;
+  
+  if (!editor) {
+    // Try common editors
+    const commonEditors = ['nano', 'vim', 'vi', 'emacs'];
+    
+    console.log(chalk.yellow('⚠️  No $EDITOR or $VISUAL environment variable set.'));
+    console.log(chalk.gray('   Available editors will be checked in this order: ' + commonEditors.join(', ')));
+    
+    // Check which editor is available
+    let availableEditor = null;
+    for (const ed of commonEditors) {
+      try {
+        const result = await new Promise((resolve) => {
+          const proc = spawn('which', [ed], { stdio: 'pipe' });
+          proc.on('close', (code) => resolve(code === 0));
+          proc.on('error', () => resolve(false));
+        });
+        if (result) {
+          availableEditor = ed;
+          break;
+        }
+      } catch (e) {
+        // Continue to next editor
+      }
+    }
+    
+    if (!availableEditor) {
+      console.log(chalk.yellow('   No common editors found. Please set $EDITOR or $VISUAL.'));
+      console.log(chalk.gray(`   File location: ${filePath}`));
+      return;
+    }
+    
+    console.log(chalk.green(`   Using: ${availableEditor}`));
+    
+    // Launch the editor
+    return new Promise((resolve, reject) => {
+      const editorProc = spawn(availableEditor, [filePath], {
+        stdio: 'inherit',
+        shell: false
+      });
+      
+      editorProc.on('exit', (code) => {
+        if (code === 0 || code === null) {
+          resolve();
+        } else {
+          reject(new Error(`Editor exited with code ${code}`));
+        }
+      });
+      
+      editorProc.on('error', (err) => {
+        reject(new Error(`Failed to launch editor: ${err.message}`));
+      });
+    });
+  } else {
+    // Use specified editor
+    return new Promise((resolve, reject) => {
+      // Split editor command in case it has arguments (e.g., "code --wait")
+      const editorParts = editor.split(' ');
+      const editorCmd = editorParts[0];
+      const editorArgs = [...editorParts.slice(1), filePath];
+      
+      const editorProc = spawn(editorCmd, editorArgs, {
+        stdio: 'inherit',
+        shell: false
+      });
+      
+      editorProc.on('exit', (code) => {
+        if (code === 0 || code === null) {
+          resolve();
+        } else {
+          reject(new Error(`Editor exited with code ${code}`));
+        }
+      });
+      
+      editorProc.on('error', (err) => {
+        reject(new Error(`Failed to launch editor: ${err.message}`));
+      });
+    });
+  }
+}
 
 program
   .name('geese')
@@ -34,6 +125,7 @@ program
   .option('--inspect [directory]', 'Show configuration hierarchy')
   .option('--show', 'Show effective configuration for current directory')
   .option('--init-local', 'Initialize local project configuration')
+  .option('--edit', 'Open configuration file in editor')
   .action(async (options) => {
     try {
       await configCommand(options);
@@ -49,6 +141,7 @@ program
   .description('Create a new .geese file (defaults to .geese/ directory)')
   .option('-t, --tool <tool>', 'CLI tool to use (default: goose)', 'goose')
   .option('-o, --output <dir>', 'Output directory (default: .geese/)')
+  .option('--edit', 'Open the created file in editor')
   .action(async (name, options) => {
     try {
       await newCommand(name, options);
@@ -65,12 +158,20 @@ const pipeCommand = program
   .option('-d, --description <text>', 'Description for new pipe')
   .option('-f, --force', 'Overwrite existing pipe without confirmation')
   .option('-s, --sources', 'Show operation sources (for list action)')
+  .option('--edit', 'Open the created pipe file in editor (for new action)')
   .action(async (action, name, options) => {
     try {
       if (action === 'list') {
         await PipeCLI.listPipes(options.sources);
       } else if (action === 'new' && name) {
-        await PipeCLI.createPipe(name, options);
+        const pipeFile = await PipeCLI.createPipe(name, options);
+        
+        // Open in editor if --edit flag is present and file was created
+        if (options.edit && pipeFile) {
+          console.log(chalk.blue('\nOpening pipe file in editor...'));
+          await launchEditor(pipeFile);
+          console.log(chalk.green('✓ Editor closed'));
+        }
       } else if (action === 'remove' && name) {
         await PipeCLI.removePipe(name);
       } else if (action === 'help') {
@@ -110,12 +211,39 @@ const runCommandDefinition = program
 async function configCommand(options) {
   const configManager = new ConfigManager();
 
+  if (options.edit) {
+    const configPath = configManager.getConfigPath();
+    
+    // Ensure config file exists
+    if (!await fs.pathExists(configPath)) {
+      // Create default config
+      const config = await configManager.loadConfig();
+      await configManager.saveConfig(config);
+      console.log(chalk.green(`✓ Created configuration file: ${configPath}`));
+    }
+    
+    console.log(chalk.blue('Opening configuration file in editor...'));
+    await launchEditor(configPath);
+    console.log(chalk.green('✓ Editor closed'));
+    return;
+  }
+
   if (options.initLocal) {
     const workingDir = process.cwd();
     const localConfigDir = await configManager.createLocalConfig(workingDir);
+    const localConfigPath = path.join(localConfigDir, 'config.json');
     console.log(chalk.green(`✓ Initialized local configuration`));
-    console.log(chalk.gray(`  Location: ${path.join(localConfigDir, 'config.json')}`));
-    console.log(chalk.gray('\nEdit this file to add project-specific settings.'));
+    console.log(chalk.gray(`  Location: ${localConfigPath}`));
+    
+    // If --edit flag is present along with --init-local, open the file
+    if (options.edit) {
+      console.log(chalk.blue('\nOpening local configuration file in editor...'));
+      await launchEditor(localConfigPath);
+      console.log(chalk.green('✓ Editor closed'));
+    } else {
+      console.log(chalk.gray('\nEdit this file to add project-specific settings.'));
+      console.log(chalk.gray('Tip: Use "geese config --edit" to open the global config in your editor'));
+    }
     return;
   }
 
@@ -280,6 +408,13 @@ async function newCommand(name, options) {
   // Show hint about directory structure
   if (outputDir.endsWith('.geese')) {
     console.log(chalk.gray(`\nℹ  Files in .geese/ directory are discovered automatically`));
+  }
+  
+  // Open in editor if --edit flag is present
+  if (options.edit) {
+    console.log(chalk.blue('\nOpening file in editor...'));
+    await launchEditor(filepath);
+    console.log(chalk.green('✓ Editor closed'));
   }
 }
 
