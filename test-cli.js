@@ -266,6 +266,37 @@ test('geese pipe new with --edit creates pipe file (no editor test)', () => {
   }
 });
 
+// Test 17: geese new --wizard flag exists
+test('geese new --wizard flag exists in help', () => {
+  const help = exec(`node ${GEESE_BIN} new --help`);
+  if (!help.includes('--wizard')) {
+    throw new Error('--wizard flag not found in new help');
+  }
+});
+
+// Test 18: Wizard module can be instantiated
+test('Wizard module can be instantiated', () => {
+  const Wizard = require('./src/wizard');
+  const ToolRegistry = require('./src/tool-registry');
+  const runner = ToolRegistry.getRunner('goose');
+  
+  const wizard = new Wizard(runner);
+  if (!wizard) {
+    throw new Error('Wizard could not be instantiated');
+  }
+  
+  // Check wizard has the expected methods
+  if (typeof wizard.run !== 'function') {
+    throw new Error('Wizard missing run method');
+  }
+  if (typeof wizard.promptForProperty !== 'function') {
+    throw new Error('Wizard missing promptForProperty method');
+  }
+  if (typeof wizard.getPropertyMetadata !== 'function') {
+    throw new Error('Wizard missing getPropertyMetadata method');
+  }
+});
+
 // Cleanup after tests
 cleanup();
 

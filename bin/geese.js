@@ -16,6 +16,7 @@ const ReportGenerator = require('../src/report-generator');
 const PipeCLI = require('../src/pipe-cli');
 const GeeseFileFinder = require('../src/geese-file-finder');
 const CLIArgumentParser = require('../src/cli-argument-parser');
+const Wizard = require('../src/wizard');
 
 const program = new Command();
 
@@ -147,6 +148,7 @@ program
   .description('Create a new .geese file (defaults to .geese/ directory)')
   .option('-t, --tool <tool>', 'CLI tool to use (default: goose)', 'goose')
   .option('-o, --output <dir>', 'Output directory (default: .geese/)')
+  .option('--wizard', 'Interactive wizard to configure system properties')
   .option('--edit', 'Open the created file in editor')
   .action(async (name, options) => {
     try {
@@ -366,7 +368,13 @@ async function newCommand(name, options) {
   
   // Get default frontmatter and merge with config
   const defaultFrontmatter = runner.getDefaultFrontmatter();
-  const frontmatter = { ...defaultFrontmatter, ...toolConfig };
+  let frontmatter = { ...defaultFrontmatter, ...toolConfig };
+  
+  // Run wizard if --wizard flag is present
+  if (options.wizard) {
+    const wizard = new Wizard(runner);
+    frontmatter = await wizard.run(frontmatter);
+  }
   
   // Get default template
   const template = runner.getDefaultTemplate();
