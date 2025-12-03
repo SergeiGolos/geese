@@ -5,6 +5,7 @@ const chalk = require('chalk').default || require('chalk');
 
 // Import our modules
 const PipeCLI = require('../src/pipe-cli');
+const RunnerCLI = require('../src/runner-cli');
 const { createContainer } = require('../src/container-setup');
 
 // Create global service container
@@ -89,6 +90,44 @@ const pipeCommand = program
       } else {
         console.error(chalk.red('Invalid pipe command'));
         console.log('Usage: geese pipe <list|new|remove|help> [name]');
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(chalk.red('Error:'), error.message);
+      process.exit(1);
+    }
+  });
+
+// Runner command
+const runnerCommand = program
+  .command('runner <action> [name]')
+  .description('Manage custom tool runners')
+  .option('-d, --description <text>', 'Description for new runner')
+  .option('-f, --force', 'Overwrite existing runner without confirmation')
+  .option('--local', 'Create/remove in local .geese directory instead of global')
+  .option('-s, --sources', 'Show runner sources (for list action)')
+  .option('--edit', 'Open the created runner files in editor (for new action)')
+  .action(async (action, name, options) => {
+    try {
+      if (action === 'list') {
+        await RunnerCLI.listRunners(container, options.sources);
+      } else if (action === 'new' && name) {
+        const files = await RunnerCLI.createRunner(name, options);
+        
+        // Open in editor if --edit flag is present and files were created
+        if (options.edit && files) {
+          console.log(chalk.blue('\nOpening runner files in editor...'));
+          await launchEditor(files.providerFile);
+          await launchEditor(files.runnerFile);
+          console.log(chalk.green('✓ Editor closed'));
+        }
+      } else if (action === 'remove' && name) {
+        await RunnerCLI.removeRunner(name, options);
+      } else if (action === 'help') {
+        RunnerCLI.showHelp();
+      } else {
+        console.error(chalk.red('Invalid runner command'));
+        console.log('Usage: geese runner <list|new|remove|help> [name]');
         process.exit(1);
       }
     } catch (error) {
