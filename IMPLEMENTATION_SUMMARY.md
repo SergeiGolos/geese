@@ -153,8 +153,13 @@ All tests passing ✓
 - `package.json` - Update test script
 - `README.md` - Comprehensive documentation
 
-### Renamed Files
-- `bin/geese.js` → `bin/geese-batch-old.js` (backup)
+### Removed Files (Dead Code Cleanup)
+- `bin/geese-auto.js` - Old auto mode CLI (replaced by main CLI)
+- `bin/geese-simple.js` - Old simple mode CLI (replaced by main CLI)
+- `bin/geese-batch.js` - Old batch mode CLI (replaced by main CLI)
+- `bin/geese-batch-old.js` - Backup of old batch CLI (no longer needed)
+- `debug-cli.js` - Debug script (not used in production)
+- `debug-find.js` - Debug script with hardcoded paths (not used in production)
 
 ## Security Considerations
 
@@ -179,7 +184,6 @@ geese config --set __proto__.polluted "malicious"  # Blocked!
 ## Backward Compatibility
 
 All existing functionality preserved:
-- Old bin files (`geese-auto.js`, `geese-simple.js`, `geese-batch.js`) still work
 - Existing .geese files work unchanged
 - Parser supports both `@property` and `property` syntax
 - GooseRunner maintains old API methods
