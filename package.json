@@ -10,7 +10,7 @@
     "start": "node bin/geese.js",
     "dev": "node bin/geese.js",
     "setup": "node setup-dev.js",
-    "test": "node test-cli.js && node test-pipes.js && node test-schema-validator.js && node test-interfaces.js"
+    "test": "node test-cli.js && node test-pipes.js && node test-schema-validator.js && node test-interfaces.js && node test-container.js && node test-event-emitter.js"
   },
   "keywords": ["cli", "ai", "file-processing", "automation", "goose"],
   "author": "",
