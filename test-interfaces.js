@@ -11,6 +11,17 @@ const ConfigManager = require('./src/config-manager');
 const GeeseFileFinder = require('./src/geese-file-finder');
 const ReportGenerator = require('./src/report-generator');
 
+// Test fixture: Concrete implementation of IPipeOperation
+class TestTrimOperation extends IPipeOperation {
+  getName() {
+    return 'trim';
+  }
+  
+  execute(value, args, context) {
+    return String(value).trim();
+  }
+}
+
 // Test utilities
 let passed = 0;
 let failed = 0;
@@ -168,7 +179,6 @@ async function runTests() {
       passed++;
     } else {
       console.error(`✗ IReportGenerator.createSessionEntry() throws if not implemented`);
-      console.error(`  Expected error containing "must be implemented by subclass" but got: ${error.message}`);
       failed++;
     }
   }
@@ -209,7 +219,6 @@ async function runTests() {
       passed++;
     } else {
       console.error(`✗ IPipeOperation.execute() throws if not implemented`);
-      console.error(`  Expected error containing "must be implemented by subclass" but got: ${error.message}`);
       failed++;
     }
   }
@@ -225,7 +234,6 @@ async function runTests() {
       passed++;
     } else {
       console.error(`✗ IPipeOperation.getName() throws if not implemented`);
-      console.error(`  Expected error containing "must be implemented by subclass" but got: ${error.message}`);
       failed++;
     }
   }
@@ -236,25 +244,16 @@ async function runTests() {
     'IPipeOperation.validateArgs() has default implementation returning true'
   );
 
-  // Test 20: IPipeOperation has default implementation for getMetadata()
+  // Test 20: IPipeOperation getMetadata() doesn't call unimplemented getName()
+  // getMetadata() should handle cases where getName() is not implemented
   const metadata = operation.getMetadata();
   assert(
-    typeof metadata === 'object' && metadata.description,
-    'IPipeOperation.getMetadata() has default implementation'
+    typeof metadata === 'object' && metadata.name === 'unknown',
+    'IPipeOperation.getMetadata() handles unimplemented getName()'
   );
 
   // Test 21: Create a concrete implementation of IPipeOperation
-  class TrimOperation extends IPipeOperation {
-    getName() {
-      return 'trim';
-    }
-    
-    execute(value, args, context) {
-      return String(value).trim();
-    }
-  }
-
-  const trimOp = new TrimOperation();
+  const trimOp = new TestTrimOperation();
   assert(
     trimOp instanceof IPipeOperation,
     'Concrete operation extends IPipeOperation'
@@ -266,6 +265,13 @@ async function runTests() {
   assert(
     trimOp.execute('  hello  ', [], {}) === 'hello',
     'Concrete operation implements execute()'
+  );
+  
+  // Test metadata with proper implementation
+  const trimMetadata = trimOp.getMetadata();
+  assert(
+    trimMetadata.name === 'trim',
+    'Concrete operation getMetadata() returns correct name'
   );
 
   // Test 22: Verify ObjectPathHelper.listKeys works correctly

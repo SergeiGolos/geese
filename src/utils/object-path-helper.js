@@ -13,6 +13,16 @@ class ObjectPathHelper {
   static DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
   
   /**
+   * Check if a key is safe (not a dangerous key)
+   * @param {string} key - Key to check
+   * @returns {boolean} True if key is safe
+   * @private
+   */
+  static _isSafeKey(key) {
+    return !this.DANGEROUS_KEYS.includes(key);
+  }
+  
+  /**
    * Validate a path string and split it into keys
    * @param {string} path - Dot-notation path (e.g., 'goose.model')
    * @returns {string[]} Array of validated keys
@@ -26,7 +36,7 @@ class ObjectPathHelper {
     const keys = path.split('.');
     
     for (const key of keys) {
-      if (this.DANGEROUS_KEYS.includes(key)) {
+      if (!this._isSafeKey(key)) {
         throw new Error(
           `Invalid configuration key: ${path}. Keys cannot contain '__proto__', 'constructor', or 'prototype'.`
         );
@@ -145,8 +155,8 @@ class ObjectPathHelper {
     
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        // Skip dangerous keys
-        if (this.DANGEROUS_KEYS.includes(key)) {
+        // Skip dangerous keys using the same check as validatePath
+        if (!this._isSafeKey(key)) {
           continue;
         }
         
