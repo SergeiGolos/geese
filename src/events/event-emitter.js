@@ -139,7 +139,14 @@ class EventEmitter {
       } catch (error) {
         // Emit error event if listener throws
         // Prevent one failing listener from stopping others
-        this.emit('error', { event, error, data });
+        // Guard against infinite recursion if error listener also throws
+        if (event !== 'error') {
+          this.emit('error', { event, error, data });
+        } else {
+          // If we're already handling an error event and the listener throws,
+          // log to console to avoid infinite recursion
+          console.error('Error in error event listener:', error);
+        }
       }
     }
     
