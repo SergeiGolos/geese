@@ -6,6 +6,7 @@
  */
 
 const path = require('path');
+const ObjectPathHelper = require('../utils/object-path-helper');
 
 /**
  * Custom error class for security-related errors
@@ -23,9 +24,12 @@ class SecurityError extends Error {
 class InputValidator {
   /**
    * List of dangerous keys that could lead to prototype pollution
+   * Uses ObjectPathHelper constants to maintain single source of truth
    * @type {string[]}
    */
-  static DANGEROUS_KEYS = ['__proto__', 'constructor', 'prototype'];
+  static get DANGEROUS_KEYS() {
+    return ObjectPathHelper.DANGEROUS_KEYS;
+  }
   
   /**
    * Patterns that indicate potential security vulnerabilities in file paths
@@ -117,11 +121,16 @@ class InputValidator {
     }
     
     // Check for dangerous patterns
-    for (const pattern of this.DANGEROUS_PATH_PATTERNS) {
+    // Directory traversal pattern is first in the array - handle specially if allowed
+    const directoryTraversalPattern = this.DANGEROUS_PATH_PATTERNS[0]; // /\.\.[\/\\]/
+    
+    for (let i = 0; i < this.DANGEROUS_PATH_PATTERNS.length; i++) {
+      const pattern = this.DANGEROUS_PATH_PATTERNS[i];
       if (pattern.test(filePath)) {
         // Special handling for directory traversal if explicitly allowed
-        if (pattern.source.includes('\\.\\.') && allowTraversal) {
-          continue;
+        // Check by index rather than pattern content for robustness
+        if (i === 0 && allowTraversal) {
+          continue; // Skip directory traversal check if allowed
         }
         
         throw new SecurityError(

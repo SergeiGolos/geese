@@ -41,6 +41,9 @@ class RateLimiter {
    * Acquire a token to perform an operation
    * Waits if no tokens are available
    * 
+   * Note: This implementation is safe for single-threaded JavaScript,
+   * but in a multi-threaded environment you would need proper locking.
+   * 
    * @returns {Promise<void>} Resolves when a token is acquired
    * 
    * @example
@@ -52,16 +55,22 @@ class RateLimiter {
    * }
    */
   async acquire() {
-    await this._refill();
+    // Refill tokens based on time passed
+    this._refillSync();
     
-    if (this.tokens < 1) {
-      // Calculate wait time based on rate
-      const waitTime = (1 / this.maxPerSecond) * 1000;
-      await this._sleep(waitTime);
-      return this.acquire();
+    // If we have tokens available, consume one and return immediately
+    if (this.tokens >= 1) {
+      this.tokens--;
+      return;
     }
     
-    this.tokens--;
+    // No tokens available - wait and retry
+    // Calculate wait time to get at least one token
+    const waitTime = (1 / this.maxPerSecond) * 1000;
+    await this._sleep(waitTime);
+    
+    // Recursive call - will refill and try again
+    return this.acquire();
   }
   
   /**
@@ -118,20 +127,7 @@ class RateLimiter {
   }
   
   /**
-   * Refill tokens based on time passed (async version)
-   * @private
-   */
-  async _refill() {
-    const now = Date.now();
-    const timePassed = now - this.lastRefill;
-    const tokensToAdd = (timePassed / 1000) * this.maxPerSecond;
-    
-    this.tokens = Math.min(this.burstSize, this.tokens + tokensToAdd);
-    this.lastRefill = now;
-  }
-  
-  /**
-   * Refill tokens based on time passed (sync version)
+   * Refill tokens based on time passed
    * @private
    */
   _refillSync() {
