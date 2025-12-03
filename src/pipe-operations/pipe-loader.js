@@ -97,7 +97,7 @@ class PipeLoader {
             const resolvedPath = require.resolve(pipePath);
             delete require.cache[resolvedPath];
           } catch (e) {
-            // Module not in cache, which is fine
+            // Module not in require cache, which is expected on first load
           }
           
           const pipeName = this.loadCustomPipe(pipePath);

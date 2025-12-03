@@ -48,7 +48,8 @@ class ConfigHierarchy {
 
   /**
    * Load hierarchical configuration
-   * Merges configurations from all levels in order of priority
+   * Merges configurations from all levels in order of priority:
+   * CLI args (highest) → .geese file → local config → global config → core defaults (lowest)
    * @param {string} workingDir - Current working directory
    * @param {Object} geeseFileConfig - Configuration from .geese file frontmatter (optional)
    * @param {Object} cliArgs - Command line arguments (optional)

@@ -46,7 +46,7 @@ class PromptBuilder {
    * Prompt for a select/choice value
    * @param {string} name - Property name
    * @param {Array} options - Available options
-   * @param {*} defaultValue - Default value
+   * @param {string} defaultValue - Default value
    * @returns {Promise<string>} Selected value
    */
   static async promptSelect(name, options, defaultValue) {
@@ -86,8 +86,8 @@ class PromptBuilder {
   /**
    * Prompt for an array value
    * @param {string} name - Property name
-   * @param {Array} defaultValue - Default array
-   * @returns {Promise<Array>} Array of values
+   * @param {string[]} defaultValue - Default array
+   * @returns {Promise<string[]>} Array of values
    */
   static async promptArray(name, defaultValue) {
     // Handle undefined or non-array defaultValue
