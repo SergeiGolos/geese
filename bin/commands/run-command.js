@@ -35,16 +35,14 @@ function getFileSize(filePath) {
  * @param {number} fileIndex - Index of file in processing queue (optional)
  * @returns {Promise<Object|null>} Session object or null
  */
-async function processTargetFile(parser, toolRunner, reportGenerator, geeseData, targetFile, dryRun = false, uiManager = null, fileIndex = -1) {
+async function processTargetFile(parser, toolRunner, reportGenerator, geeseData, targetFile, dryRun = false, uiManager, fileIndex) {
   const startTime = Date.now();
   
   reportGenerator.logSessionStart(geeseData.filePath, targetFile);
   
-  if (uiManager) {
-    uiManager.clearOutput();
-    uiManager.showOutput();
-    uiManager.logOutput(`Processing: ${path.basename(targetFile)}`, 'info');
-  }
+  uiManager.clearOutput();
+  uiManager.showOutput();
+  uiManager.logOutput(`Processing: ${path.basename(targetFile)}`, 'info');
   
   try {
     // Prepare context
@@ -53,33 +51,28 @@ async function processTargetFile(parser, toolRunner, reportGenerator, geeseData,
     // Generate prompt
     const prompt = parser.renderTemplate(geeseData.template, context);
     
-    if (uiManager) {
-      uiManager.logOutput('Context prepared', 'success');
-      uiManager.logOutput('Executing AI tool...', 'info');
-    }
+    uiManager.logOutput('Context prepared', 'success');
+    uiManager.logOutput('Executing AI tool...', 'info');
     
     // Execute tool (runner handles dry-run internally)
-    const executionOptions = {};
-    if (uiManager) {
-      executionOptions.onStdout = (data) => {
+    const executionOptions = {
+      onStdout: (data) => {
         uiManager.logOutput(data, 'info');
-      };
-      executionOptions.onStderr = (data) => {
+      },
+      onStderr: (data) => {
         uiManager.logOutput(data, 'warning');
-      };
-    }
+      }
+    };
     
     const result = await toolRunner.processFile(targetFile, prompt, context._gooseConfig, executionOptions);
     const endTime = Date.now();
     
-    if (uiManager) {
-      uiManager.logOutput(`Processing completed in ${endTime - startTime}ms`, 'success');
-      if (result.output) {
-        const outputLines = result.output.split('\n').slice(0, 5);
-        outputLines.forEach(line => uiManager.logOutput(line, 'info'));
-        if (result.output.split('\n').length > 5) {
-          uiManager.logOutput('... (output truncated)', 'info');
-        }
+    uiManager.logOutput(`Processing completed in ${endTime - startTime}ms`, 'success');
+    if (result.output) {
+      const outputLines = result.output.split('\n').slice(0, 5);
+      outputLines.forEach(line => uiManager.logOutput(line, 'info'));
+      if (result.output.split('\n').length > 5) {
+        uiManager.logOutput('... (output truncated)', 'info');
       }
     }
     
@@ -104,22 +97,16 @@ async function processTargetFile(parser, toolRunner, reportGenerator, geeseData,
     );
     
     // Update UI with completion
-    if (uiManager && fileIndex >= 0) {
-      uiManager.updateFileRow(fileIndex, session.tokens?.totalTokens || 0, result.success);
-      uiManager.addSession(session);
-      uiManager.hideOutput();
-    }
+    uiManager.updateFileRow(fileIndex, session.tokens?.totalTokens || 0, result.success);
+    uiManager.addSession(session);
+    uiManager.hideOutput();
     
     return session;
     
   } catch (error) {
     const endTime = Date.now();
     
-    if (uiManager) {
-      uiManager.logOutput(`Error: ${error.message}`, 'error');
-    } else {
-      console.error(chalk.red(`    ❌ Error: ${error.message}`));
-    }
+    uiManager.logOutput(`Error: ${error.message}`, 'error');
     
     const session = reportGenerator.createSessionEntry(
       geeseData.filePath,
@@ -141,11 +128,9 @@ async function processTargetFile(parser, toolRunner, reportGenerator, geeseData,
     );
     
     // Update UI with failure
-    if (uiManager && fileIndex >= 0) {
-      uiManager.updateFileRow(fileIndex, 0, false);
-      uiManager.addSession(session);
-      uiManager.hideOutput();
-    }
+    uiManager.updateFileRow(fileIndex, 0, false);
+    uiManager.addSession(session);
+    uiManager.hideOutput();
     
     return session;
   }
@@ -307,18 +292,10 @@ async function runCommand(container, directory, options) {
     return;
   }
   
-  // Initialize UI manager (use UI if explicitly enabled, not in dry-run file mode, and TTY available)
-  let uiManager = null;
-  const useUI = options.ui && !options.dryRunFile && process.stdout.isTTY;
-  
   // First pass: collect all geese files and target files
   const processingQueue = [];
   
   for (const geeseFile of geeseFiles) {
-    if (!useUI) {
-      console.log(chalk.blue(`\n📖 Processing: ${path.basename(geeseFile)}`));
-    }
-    
     try {
       // Parse .geese file with base configuration from hierarchy
       const baseConfig = hierarchicalConfig.config[tool] || {};
@@ -333,14 +310,7 @@ async function runCommand(container, directory, options) {
       );
       
       if (targetFiles.length === 0) {
-        if (!useUI) {
-          console.log(chalk.yellow('  ⚠️  No target files found'));
-        }
         continue;
-      }
-      
-      if (!useUI) {
-        console.log(chalk.green(`  📁 Found ${targetFiles.length} target file(s)`));
       }
       
       // Show target file selection
@@ -364,9 +334,6 @@ async function runCommand(container, directory, options) {
       }
       
       if (selectedTargets.length === 0) {
-        if (!useUI) {
-          console.log(chalk.yellow('  No target files selected'));
-        }
         continue;
       }
       
@@ -385,43 +352,36 @@ async function runCommand(container, directory, options) {
     return;
   }
   
-  // Initialize UI if enabled
-  if (useUI) {
-    uiManager = new UIManager();
-    uiManager.initialize();
-    
-    // Set system parameters from first geese file
-    const firstGeeseData = processingQueue[0].geeseData;
-    const systemParams = {};
-    for (const [key, value] of Object.entries(firstGeeseData.frontmatter)) {
-      if (key.startsWith('_')) {
-        systemParams[key.substring(1)] = value;
-      }
+  // Initialize UI
+  const uiManager = new UIManager();
+  uiManager.initialize();
+  
+  // Set system parameters from first geese file
+  const firstGeeseData = processingQueue[0].geeseData;
+  const systemParams = {};
+  for (const [key, value] of Object.entries(firstGeeseData.frontmatter)) {
+    if (key.startsWith('_')) {
+      systemParams[key.substring(1)] = value;
     }
-    systemParams['tool'] = tool;
-    systemParams['working_dir'] = workingDir;
-    uiManager.setSystemParameters(systemParams);
-    
-    // Add all files to the table
-    processingQueue.forEach(({ targetFile }) => {
-      uiManager.addFileRow(
-        path.basename(targetFile),
-        uiManager.getFileSize(targetFile),
-        uiManager.getFileUpdatedTime(targetFile)
-      );
-    });
   }
+  systemParams['tool'] = tool;
+  systemParams['working_dir'] = workingDir;
+  uiManager.setSystemParameters(systemParams);
+  
+  // Add all files to the table
+  processingQueue.forEach(({ targetFile }) => {
+    uiManager.addFileRow(
+      path.basename(targetFile),
+      uiManager.getFileSize(targetFile),
+      uiManager.getFileUpdatedTime(targetFile)
+    );
+  });
   
   // Process files
   const allSessions = [];
   
   for (let i = 0; i < processingQueue.length; i++) {
     const { geeseFile, geeseData, targetFile } = processingQueue[i];
-    
-    if (!useUI) {
-      const relativePath = path.relative(path.dirname(geeseFile), targetFile);
-      console.log(chalk.cyan(`  🔄 Processing: ${relativePath}`));
-    }
     
     const session = await processTargetFile(
       parser,
@@ -439,22 +399,11 @@ async function runCommand(container, directory, options) {
     }
   }
   
-  // Generate final report
+  // Show final UI summary
   if (allSessions.length > 0) {
-    if (uiManager) {
-      // Show UI summary
-      uiManager.showSummary();
-    } else {
-      console.log(chalk.blue('\n📊 Generating report...'));
-      const report = await reportGenerator.saveReport(allSessions);
-      console.log(chalk.green(`✅ Complete! Processed ${allSessions.length} session(s)`));
-      console.log(chalk.gray(`   Report: ${report}`));
-    }
+    uiManager.showSummary();
   } else {
-    if (uiManager) {
-      uiManager.destroy();
-    }
-    console.log(chalk.yellow('\n⚠️  No sessions were processed'));
+    uiManager.destroy();
   }
 }
 

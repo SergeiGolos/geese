@@ -427,21 +427,13 @@ geese run -g /path/to/goose
 
 # Dry run (preview only)
 geese run --dry-run
-
-# Enable enhanced TUI (Terminal UI) with boxes, tables, and scrolling
-geese run --ui
 ```
 
-### Enhanced Terminal UI
+### Terminal UI
 
-Geese supports an enhanced Terminal User Interface (TUI) that provides a cleaner, more organized view of the processing workflow:
+Geese provides a Terminal User Interface (TUI) that displays a cleaner, more organized view of the processing workflow.
 
-```bash
-# Enable the enhanced UI
-geese run --ui
-```
-
-The enhanced UI includes:
+The TUI includes:
 
 - **System Parameters Box**: Displays all configuration parameters at the top
 - **File Processing Table**: Shows real-time progress with columns for:
@@ -545,8 +537,6 @@ Options:
   -o, --output <dir>       Output directory for logs (default: "./logs")
   -g, --goose-path <path>  Path to goose executable
   --dry-run                Show what would be processed without executing
-  --ui                     Enable enhanced TUI with boxes, tables, and scrolling output
-  --no-ui                  Disable TUI and use simple console output (default)
   -h, --help               Display help for command
 ```
 
