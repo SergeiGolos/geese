@@ -11,7 +11,7 @@ const DirectoryWalker = require('./utils/directory-walker');
 class ToolRegistry {
   /**
    * Create a new ToolRegistry
-   * Initializes the registry and registers default tools
+   * Initializes the registry and registers default tools (currently: 'goose')
    */
   constructor() {
     this.tools = new Map();

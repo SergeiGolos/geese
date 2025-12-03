@@ -11,7 +11,7 @@ const IReportGenerator = require('./interfaces/report-generator');
 class ReportGenerator extends IReportGenerator {
   /**
    * Create a new ReportGenerator
-   * @param {string} outputDir - Directory where reports will be saved (default: './logs')
+   * @param {string} [outputDir='./logs'] - Directory where reports will be saved
    */
   constructor(outputDir = './logs') {
     super();
@@ -30,7 +30,7 @@ class ReportGenerator extends IReportGenerator {
   /**
    * Generate a filename for the report
    * @param {string} baseFilename - Base name for the file
-   * @param {string} timestamp - ISO timestamp (default: current time)
+   * @param {string} [timestamp] - ISO timestamp in format YYYY-MM-DDTHH-MM-SS-SSSZ (defaults to current time)
    * @returns {string} Generated filename with timestamp
    */
   generateFilename(baseFilename, timestamp = new Date().toISOString().replace(/[:.]/g, '-')) {
@@ -41,12 +41,12 @@ class ReportGenerator extends IReportGenerator {
    * Create a session entry object for a processing session
    * @param {string} geeseFile - Path to the .geese file
    * @param {string} targetFile - Path to the target file being processed
-   * @param {Object} context - Context object with variables and config
+   * @param {Object} context - Context object containing template variables (filename, content, filepath, etc.) and _gooseConfig
    * @param {string} prompt - Generated prompt sent to the tool
    * @param {string} response - Response from the tool
-   * @param {number} startTime - Session start timestamp
-   * @param {number} endTime - Session end timestamp
-   * @returns {Object} Session entry object
+   * @param {number} startTime - Session start timestamp (milliseconds since epoch)
+   * @param {number} endTime - Session end timestamp (milliseconds since epoch)
+   * @returns {Object} Session entry object with geeseFile, targetFile, context, prompt, response, duration, tokens, and success
    */
   createSessionEntry(geeseFile, targetFile, context, prompt, response, startTime, endTime) {
     const duration = endTime - startTime;
@@ -204,7 +204,7 @@ class ReportGenerator extends IReportGenerator {
   /**
    * Save sessions report to a file
    * @param {Array<Object>} sessions - Array of session objects to report
-   * @param {string|null} customFilename - Custom filename (optional)
+   * @param {string} [customFilename] - Custom filename
    * @returns {Promise<Object>} Object with filename, filePath, and size
    */
   async saveReport(sessions, customFilename = null) {
@@ -239,7 +239,7 @@ class ReportGenerator extends IReportGenerator {
    * @param {string} geeseFile - Path to the .geese file
    * @param {string} targetFile - Path to the target file
    * @param {number} duration - Duration in milliseconds
-   * @param {boolean} success - Whether the session succeeded (default: true)
+   * @param {boolean} [success=true] - Whether the session succeeded
    */
   logSessionEnd(geeseFile, targetFile, duration, success = true) {
     const status = success ? chalk.green('✅') : chalk.red('❌');
@@ -249,7 +249,7 @@ class ReportGenerator extends IReportGenerator {
   /**
    * Log an error message with optional error object
    * @param {string} message - Error message to display
-   * @param {Error|null} error - Error object (optional)
+   * @param {Error} [error] - Error object
    */
   logError(message, error = null) {
     console.error(chalk.red(`❌ Error: ${message}`));
