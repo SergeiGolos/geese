@@ -7,6 +7,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
+const DirectoryWalker = require('./utils/directory-walker');
 
 class PipeOperations {
   constructor() {
@@ -487,18 +488,7 @@ class PipeOperations {
    * @returns {string|null} Path to .geese directory or null
    */
   findLocalGeeseDir(startPath) {
-    let currentDir = path.resolve(startPath);
-    const root = path.parse(currentDir).root;
-    
-    while (currentDir !== root) {
-      const geeseDir = path.join(currentDir, '.geese');
-      if (fs.existsSync(geeseDir)) {
-        return geeseDir;
-      }
-      currentDir = path.dirname(currentDir);
-    }
-    
-    return null;
+    return DirectoryWalker.findGeeseDirectory(startPath);
   }
 
   /**

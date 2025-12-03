@@ -2,6 +2,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
 const ObjectPathHelper = require('./utils/object-path-helper');
+const DirectoryWalker = require('./utils/directory-walker');
 
 class ConfigManager {
   constructor() {
@@ -124,18 +125,7 @@ class ConfigManager {
    * @returns {string|null} Path to local .geese directory or null
    */
   getLocalConfigDir(startPath) {
-    let currentDir = path.resolve(startPath);
-    const root = path.parse(currentDir).root;
-    
-    while (currentDir !== root) {
-      const geeseDir = path.join(currentDir, '.geese');
-      if (fs.existsSync(geeseDir)) {
-        return geeseDir;
-      }
-      currentDir = path.dirname(currentDir);
-    }
-    
-    return null;
+    return DirectoryWalker.findGeeseDirectory(startPath);
   }
 
   /**
