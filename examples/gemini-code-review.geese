@@ -1,0 +1,61 @@
+---
+_include:
+  - "src/**/*.js"
+  - "src/**/*.ts"
+_exclude:
+  - "node_modules/**"
+  - "*.test.js"
+  - "dist/**"
+model: "gemini-pro"
+temperature: 0.7
+max_tokens: 2048
+output_format: "markdown"
+stream: true
+safe_mode: true
+log_level: "info"
+---
+
+# Code Review with Gemini
+
+Please perform a comprehensive code review of the following file using Google's Gemini AI.
+
+## File Information
+- **File**: {{filename}}
+- **Path**: {{filepath}}
+
+## Code to Review
+
+```
+{{content}}
+```
+
+## Review Requirements
+
+Please analyze the code and provide:
+
+1. **Code Quality Assessment**
+   - Overall code structure and organization
+   - Naming conventions and clarity
+   - Code readability and maintainability
+
+2. **Security Concerns**
+   - Potential security vulnerabilities
+   - Input validation issues
+   - Authentication/authorization concerns
+
+3. **Performance Optimization**
+   - Potential performance bottlenecks
+   - Memory usage optimization opportunities
+   - Algorithm efficiency improvements
+
+4. **Best Practices**
+   - Adherence to language-specific best practices
+   - Design pattern usage
+   - Error handling and edge cases
+
+5. **Specific Recommendations**
+   - Actionable improvements with code examples
+   - Prioritized list of changes
+   - Estimated impact of each change
+
+Please format your response using markdown with clear sections and code examples where appropriate.
