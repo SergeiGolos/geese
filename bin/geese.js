@@ -152,6 +152,8 @@ const runCommandDefinition = program
   .option('--dry-run', 'Show what would be processed without executing (console output)')
   .option('--dry-run-file <file>', 'Dry-run and write command details to file')
   .option('--debug-config', 'Show configuration hierarchy debug information')
+  .option('--ui', 'Enable enhanced TUI with boxes, tables, and scrolling output')
+  .option('--no-ui', 'Disable TUI and use simple console output (default)')
   .action(async (directory, options) => {
     try {
       await runCommand(container, directory || '.', options);

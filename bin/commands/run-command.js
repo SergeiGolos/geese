@@ -307,9 +307,9 @@ async function runCommand(container, directory, options) {
     return;
   }
   
-  // Initialize UI manager (use UI unless explicitly disabled or in dry-run file mode)
+  // Initialize UI manager (use UI if explicitly enabled, not in dry-run file mode, and TTY available)
   let uiManager = null;
-  const useUI = !options.dryRunFile && process.stdout.isTTY;
+  const useUI = options.ui && !options.dryRunFile && process.stdout.isTTY;
   
   // First pass: collect all geese files and target files
   const processingQueue = [];
