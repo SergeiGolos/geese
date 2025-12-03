@@ -9,7 +9,8 @@ const SchemaValidator = require('./utils/schema-validator');
 // System properties that control geese behavior (use $ prefix for visual distinction)
 const SYSTEM_PROPERTIES = [
   '$include', '$exclude', '$recipe', '$model', 
-  '$temperature', '$max_tokens', '$flags'
+  '$temperature', '$max_tokens', '$config', '$profile',
+  '$resume', '$log_level', '$no_color', '$flags'
 ];
 
 // Extract property names without $ prefix for backward compatibility checks

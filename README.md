@@ -237,6 +237,11 @@ System properties control Geese behavior and are parsed once per file. They use 
   - `$model`: AI model to use (e.g., "gpt-4", "claude-3")
   - `$temperature`: AI response temperature (0-1)
   - `$max_tokens`: Maximum tokens in response
+  - `$config`: Path to custom goose config file (e.g., "~/.goose/custom-config.yaml")
+  - `$profile`: Profile name from goose config (e.g., "work", "personal")
+  - `$resume`: Session ID to resume a previous goose session
+  - `$log_level`: Logging level for goose output ("debug", "info", "warning", "error")
+  - `$no_color`: Disable colored output (boolean, true/false)
   - `$flags`: Array of additional CLI flags
 
 **Note:** For backward compatibility, properties with `@` prefix (like `@include`) are automatically converted to `$` prefix.
