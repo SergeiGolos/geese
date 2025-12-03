@@ -188,6 +188,37 @@ async function runTests() {
   assert(args.includes('--recipe'), 'GooseProvider.buildArgs() includes --recipe flag');
   assert(args.includes('code-review'), 'GooseProvider.buildArgs() includes recipe value');
 
+  // Test new CLI parameters
+  const newArgs = gooseProvider.buildArgs({ 
+    config: '/path/to/config.yaml',
+    profile: 'work',
+    resume: 'session123',
+    log_level: 'debug',
+    no_color: true,
+    temperature: 0.8,
+    max_tokens: 3000
+  });
+  assert(newArgs.includes('--config'), 'GooseProvider.buildArgs() includes --config flag');
+  assert(newArgs.includes('/path/to/config.yaml'), 'GooseProvider.buildArgs() includes config path');
+  assert(newArgs.includes('--profile'), 'GooseProvider.buildArgs() includes --profile flag');
+  assert(newArgs.includes('work'), 'GooseProvider.buildArgs() includes profile value');
+  assert(newArgs.includes('--resume'), 'GooseProvider.buildArgs() includes --resume flag');
+  assert(newArgs.includes('session123'), 'GooseProvider.buildArgs() includes resume session');
+  assert(newArgs.includes('--log-level'), 'GooseProvider.buildArgs() includes --log-level flag');
+  assert(newArgs.includes('debug'), 'GooseProvider.buildArgs() includes log level value');
+  assert(newArgs.includes('--no-color'), 'GooseProvider.buildArgs() includes --no-color flag');
+  assert(newArgs.includes('--temperature'), 'GooseProvider.buildArgs() includes --temperature flag');
+  assert(newArgs.includes('0.8'), 'GooseProvider.buildArgs() includes temperature value');
+  assert(newArgs.includes('--max-tokens'), 'GooseProvider.buildArgs() includes --max-tokens flag');
+  assert(newArgs.includes('3000'), 'GooseProvider.buildArgs() includes max_tokens value');
+
+  // Test that schema includes new optional parameters
+  assert(schema.optional.includes('config'), 'GooseProvider schema includes config');
+  assert(schema.optional.includes('profile'), 'GooseProvider schema includes profile');
+  assert(schema.optional.includes('resume'), 'GooseProvider schema includes resume');
+  assert(schema.optional.includes('log_level'), 'GooseProvider schema includes log_level');
+  assert(schema.optional.includes('no_color'), 'GooseProvider schema includes no_color');
+
   // Test ToolExecutor
   const executor = new ToolExecutor(gooseProvider, memoryRunner);
   assert(executor.getDefaultPath() === 'goose', 'ToolExecutor.getDefaultPath() delegates to provider');

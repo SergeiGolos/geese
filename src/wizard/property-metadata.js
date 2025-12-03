@@ -59,6 +59,35 @@ class PropertyMetadata {
         hint: 'Maximum tokens in response',
         default: 2000
       },
+      config: {
+        type: 'input',
+        hint: 'Path to custom goose config file (e.g., ~/.goose/custom-config.yaml)',
+        examples: ['~/.goose/config.yaml', './goose-config.yaml'],
+        default: ''
+      },
+      profile: {
+        type: 'input',
+        hint: 'Profile name to use from goose config (e.g., work, personal)',
+        examples: ['default', 'work', 'personal'],
+        default: ''
+      },
+      resume: {
+        type: 'input',
+        hint: 'Session ID to resume (from previous goose session)',
+        examples: ['abc123', 'session-2024-01-15'],
+        default: ''
+      },
+      log_level: {
+        type: 'select',
+        hint: 'Logging level for goose output',
+        options: ['debug', 'info', 'warning', 'error'],
+        default: 'info'
+      },
+      no_color: {
+        type: 'confirm',
+        hint: 'Disable colored output',
+        default: false
+      },
       flags: {
         type: 'array',
         hint: 'Additional CLI flags to pass to the tool',
