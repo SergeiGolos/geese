@@ -106,15 +106,19 @@ async function runTests() {
   const fileExists = await fs.pathExists(tmpFile);
   assert(fileExists, 'FileWriterRunner creates output file');
 
-  if (fileExists) {
-    const fileContent = await fs.readFile(tmpFile, 'utf-8');
-    assert(fileContent.includes('---'), 'FileWriterRunner creates frontmatter');
-    assert(fileContent.includes('executable:'), 'FileWriterRunner includes executable in frontmatter');
-    assert(fileContent.includes('goose'), 'FileWriterRunner includes correct executable');
-    assert(fileContent.includes('Test stdin content'), 'FileWriterRunner includes stdin content');
-    
+  try {
+    if (fileExists) {
+      const fileContent = await fs.readFile(tmpFile, 'utf-8');
+      assert(fileContent.includes('---'), 'FileWriterRunner creates frontmatter');
+      assert(fileContent.includes('executable:'), 'FileWriterRunner includes executable in frontmatter');
+      assert(fileContent.includes('goose'), 'FileWriterRunner includes correct executable');
+      assert(fileContent.includes('Test stdin content'), 'FileWriterRunner includes stdin content');
+    }
+  } finally {
     // Cleanup
-    await fs.remove(tmpFile);
+    if (await fs.pathExists(tmpFile)) {
+      await fs.remove(tmpFile);
+    }
   }
 
   const fileAvailable = await fileRunner.checkAvailable('test');
@@ -228,9 +232,13 @@ async function runTests() {
   const fileExecutor = ToolExecutor.create(gooseProvider, 'file', { outputPath: tmpFile2 });
   assert(fileExecutor.getRunner() instanceof FileWriterRunner, 'ToolExecutor.create("file") creates FileWriterRunner');
   
-  // Cleanup
-  if (await fs.pathExists(tmpFile2)) {
-    await fs.remove(tmpFile2);
+  try {
+    // Additional verification could go here
+  } finally {
+    // Cleanup
+    if (await fs.pathExists(tmpFile2)) {
+      await fs.remove(tmpFile2);
+    }
   }
 
   const realExecutor = ToolExecutor.create(gooseProvider, 'real');
