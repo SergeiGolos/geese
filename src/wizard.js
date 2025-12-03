@@ -269,9 +269,8 @@ class Wizard {
     for (const key of Object.keys(frontmatter)) {
       if (key.startsWith('@')) {
         const newKey = `$${key.slice(1)}`;
-        if (!frontmatter[newKey]) {
-          frontmatter[newKey] = frontmatter[key];
-        }
+        // Use existing $ value if present, otherwise use @ value
+        frontmatter[newKey] = frontmatter[newKey] || frontmatter[key];
         delete frontmatter[key];
       }
     }
