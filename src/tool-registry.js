@@ -57,5 +57,5 @@ class ToolRegistry {
   }
 }
 
-// Export singleton instance
-module.exports = new ToolRegistry();
+// Export class instead of singleton instance
+module.exports = ToolRegistry;

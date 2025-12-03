@@ -573,5 +573,5 @@ class PipeOperations {
   }
 }
 
-// Export singleton instance
-module.exports = new PipeOperations();
+// Export class instead of singleton instance
+module.exports = PipeOperations;

@@ -357,12 +357,13 @@ async function newCommand(name, options) {
   const { tool, output } = options;
   
   // Validate tool
-  if (!ToolRegistry.has(tool)) {
-    throw new Error(`Unknown tool: ${tool}. Available: ${ToolRegistry.getToolNames().join(', ')}`);
+  const toolRegistry = new ToolRegistry();
+  if (!toolRegistry.has(tool)) {
+    throw new Error(`Unknown tool: ${tool}. Available: ${toolRegistry.getToolNames().join(', ')}`);
   }
   
   // Get tool runner for defaults
-  const runner = ToolRegistry.getRunner(tool);
+  const runner = toolRegistry.getRunner(tool);
   const configManager = new ConfigManager();
   const toolConfig = await configManager.getToolConfig(tool);
   
@@ -381,9 +382,10 @@ async function newCommand(name, options) {
   
   // Determine output directory - default to .geese/ directory
   const workingDir = process.cwd();
+  const geeseFileFinder = new GeeseFileFinder();
   const outputDir = output 
     ? path.resolve(workingDir, output)
-    : GeeseFileFinder.getDefaultOutputDir(workingDir);
+    : geeseFileFinder.getDefaultOutputDir(workingDir);
   
   // Ensure output directory exists
   await fs.ensureDir(outputDir);
@@ -456,8 +458,9 @@ async function runCommand(directory, options) {
   }
   
   // Initialize components
-  const parser = new GeeseParser();
-  const pipeOps = require('../src/pipe-operations');
+  const PipeOperations = require('../src/pipe-operations');
+  const pipeOps = new PipeOperations();
+  const parser = new GeeseParser(pipeOps);
   
   // Initialize pipe operations with hierarchical loading
   await pipeOps.initializeHierarchy(workingDir);
@@ -471,7 +474,8 @@ async function runCommand(directory, options) {
   
   // Determine tool and get runner
   const tool = config.defaultTool || 'goose';
-  const toolRunner = ToolRegistry.getRunner(tool);
+  const toolRegistry = new ToolRegistry();
+  const toolRunner = toolRegistry.getRunner(tool);
   
   // Apply config overrides
   const toolConfig = config[tool] || {};
@@ -514,7 +518,8 @@ async function runCommand(directory, options) {
     console.log(chalk.blue(`📄 Processing file: ${path.basename(filePath)}`));
   } else {
     // Use hierarchical file discovery
-    geeseFiles = await GeeseFileFinder.discoverGeeseFiles(workingDir);
+    const geeseFileFinder = new GeeseFileFinder();
+    geeseFiles = await geeseFileFinder.discoverGeeseFiles(workingDir);
     
     // Fallback to old method if no files found with new method
     if (geeseFiles.length === 0) {

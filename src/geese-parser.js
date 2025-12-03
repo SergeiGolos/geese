@@ -3,7 +3,7 @@ const path = require('path');
 const matter = require('gray-matter');
 const Handlebars = require('handlebars');
 const glob = require('glob');
-const pipeOperations = require('./pipe-operations');
+const PipeOperations = require('./pipe-operations');
 
 // System properties that control geese behavior (use $ prefix for visual distinction)
 const SYSTEM_PROPERTIES = [
@@ -15,7 +15,12 @@ const SYSTEM_PROPERTIES = [
 const SYSTEM_PROPERTY_NAMES = SYSTEM_PROPERTIES.map(prop => prop.substring(1));
 
 class GeeseParser {
-  constructor() {
+  /**
+   * Create a new GeeseParser
+   * @param {PipeOperations} pipeOperations - Optional PipeOperations instance for dependency injection
+   */
+  constructor(pipeOperations = null) {
+    this.pipeOperations = pipeOperations || new PipeOperations();
     this.handlebars = Handlebars.create();
     this.registerHelpers();
   }
@@ -255,7 +260,7 @@ class GeeseParser {
         // Check if value is a string with pipe operations
         if (typeof value === 'string' && value.includes('~>')) {
           // Execute pipe chain with current context
-          context[key] = pipeOperations.executePipeChain(value, context);
+          context[key] = this.pipeOperations.executePipeChain(value, context);
         } else {
           // No pipes, use value as-is
           context[key] = value;
@@ -319,7 +324,7 @@ class GeeseParser {
     for (const file of files) {
       const filePath = path.join(directory, file);
       try {
-        pipeOperations.loadCustomPipe(filePath);
+        this.pipeOperations.loadCustomPipe(filePath);
       } catch (error) {
         console.warn(`Warning: Failed to load custom pipe ${file}: ${error.message}`);
       }
