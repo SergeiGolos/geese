@@ -26,6 +26,11 @@ class GeeseParser {
     this.registerHelpers();
   }
 
+  /**
+   * Register custom Handlebars helpers
+   * Adds helpers like 'json' for template rendering
+   * @private
+   */
   registerHelpers() {
     // Register any custom handlebars helpers if needed
     this.handlebars.registerHelper('json', (obj) => JSON.stringify(obj, null, 2));

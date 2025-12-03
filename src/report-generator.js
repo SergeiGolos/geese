@@ -3,21 +3,51 @@ const path = require('path');
 const chalk = require('chalk').default || require('chalk');
 const IReportGenerator = require('./interfaces/report-generator');
 
+/**
+ * ReportGenerator class for generating markdown reports from processing sessions
+ * Handles logging, report generation, and file output for geese processing runs
+ * @extends IReportGenerator
+ */
 class ReportGenerator extends IReportGenerator {
+  /**
+   * Create a new ReportGenerator
+   * @param {string} outputDir - Directory where reports will be saved (default: './logs')
+   */
   constructor(outputDir = './logs') {
     super();
     this.outputDir = outputDir;
     this.ensureOutputDir();
   }
 
+  /**
+   * Ensure the output directory exists
+   * @returns {Promise<void>}
+   */
   async ensureOutputDir() {
     await fs.ensureDir(this.outputDir);
   }
 
+  /**
+   * Generate a filename for the report
+   * @param {string} baseFilename - Base name for the file
+   * @param {string} timestamp - ISO timestamp (default: current time)
+   * @returns {string} Generated filename with timestamp
+   */
   generateFilename(baseFilename, timestamp = new Date().toISOString().replace(/[:.]/g, '-')) {
     return `${baseFilename}_${timestamp}.log.md`;
   }
 
+  /**
+   * Create a session entry object for a processing session
+   * @param {string} geeseFile - Path to the .geese file
+   * @param {string} targetFile - Path to the target file being processed
+   * @param {Object} context - Context object with variables and config
+   * @param {string} prompt - Generated prompt sent to the tool
+   * @param {string} response - Response from the tool
+   * @param {number} startTime - Session start timestamp
+   * @param {number} endTime - Session end timestamp
+   * @returns {Object} Session entry object
+   */
   createSessionEntry(geeseFile, targetFile, context, prompt, response, startTime, endTime) {
     const duration = endTime - startTime;
     
@@ -35,6 +65,12 @@ class ReportGenerator extends IReportGenerator {
     };
   }
 
+  /**
+   * Sanitize context object for safe storage
+   * Truncates large content to prevent oversized reports
+   * @param {Object} context - Context object to sanitize
+   * @returns {Object} Sanitized context
+   */
   sanitizeContext(context) {
     const sanitized = { ...context };
     
@@ -46,6 +82,12 @@ class ReportGenerator extends IReportGenerator {
     return sanitized;
   }
 
+  /**
+   * Sanitize content for safe markdown rendering
+   * Escapes code blocks and normalizes newlines
+   * @param {string} content - Content to sanitize
+   * @returns {string} Sanitized markdown content
+   */
   sanitizeForMarkdown(content) {
     if (typeof content !== 'string') return '';
     
@@ -55,6 +97,11 @@ class ReportGenerator extends IReportGenerator {
       .trim();
   }
 
+  /**
+   * Extract token usage information from tool response
+   * @param {string} response - Response from the tool
+   * @returns {Object} Token information object
+   */
   extractTokenInfo(response) {
     // This would extract token information from the goose response
     // For now, return placeholder data
@@ -65,6 +112,11 @@ class ReportGenerator extends IReportGenerator {
     };
   }
 
+  /**
+   * Generate a markdown report from processing sessions
+   * @param {Array<Object>} sessions - Array of session entry objects
+   * @returns {string} Markdown formatted report
+   */
   generateMarkdownReport(sessions) {
     const timestamp = new Date().toISOString();
     let report = `# Geese Processing Report\n\n`;
@@ -140,10 +192,21 @@ class ReportGenerator extends IReportGenerator {
     return report;
   }
 
+  /**
+   * Calculate total duration across all sessions
+   * @param {Array<Object>} sessions - Array of session objects
+   * @returns {number} Total duration in milliseconds
+   */
   calculateTotalDuration(sessions) {
     return sessions.reduce((total, session) => total + session.duration, 0);
   }
 
+  /**
+   * Save sessions report to a file
+   * @param {Array<Object>} sessions - Array of session objects to report
+   * @param {string|null} customFilename - Custom filename (optional)
+   * @returns {Promise<Object>} Object with filename, filePath, and size
+   */
   async saveReport(sessions, customFilename = null) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = customFilename || this.generateFilename('geese_session', timestamp);
@@ -162,15 +225,32 @@ class ReportGenerator extends IReportGenerator {
     };
   }
 
+  /**
+   * Log the start of a processing session
+   * @param {string} geeseFile - Path to the .geese file
+   * @param {string} targetFile - Path to the target file
+   */
   logSessionStart(geeseFile, targetFile) {
     console.log(chalk.blue(`🚀 Processing: ${path.basename(geeseFile)} → ${path.basename(targetFile)}`));
   }
 
+  /**
+   * Log the end of a processing session
+   * @param {string} geeseFile - Path to the .geese file
+   * @param {string} targetFile - Path to the target file
+   * @param {number} duration - Duration in milliseconds
+   * @param {boolean} success - Whether the session succeeded (default: true)
+   */
   logSessionEnd(geeseFile, targetFile, duration, success = true) {
     const status = success ? chalk.green('✅') : chalk.red('❌');
     console.log(`${status} Completed: ${path.basename(geeseFile)} → ${path.basename(targetFile)} (${duration}ms)`);
   }
 
+  /**
+   * Log an error message with optional error object
+   * @param {string} message - Error message to display
+   * @param {Error|null} error - Error object (optional)
+   */
   logError(message, error = null) {
     console.error(chalk.red(`❌ Error: ${message}`));
     if (error) {
