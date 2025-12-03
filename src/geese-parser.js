@@ -313,15 +313,17 @@ class GeeseParser {
     
     const validationSchema = schema || defaultSchema;
     
-    try {
-      SchemaValidator.validateOrThrow(frontmatter, validationSchema, {
-        allowPrefixVariants: true  // Support both $include and include
-      });
-      return true;
-    } catch (error) {
-      // Convert generic validation error to .geese-specific error message
-      throw new Error(`.geese file validation failed: ${error.message}`);
+    const result = SchemaValidator.validate(frontmatter, validationSchema, {
+      allowPrefixVariants: true  // Support both $include and include
+    });
+    
+    if (!result.valid) {
+      // Create .geese-specific error message from validation errors
+      const errorList = result.errors.join('; ');
+      throw new Error(`.geese file validation failed: ${errorList}`);
     }
+    
+    return true;
   }
   
   /**
