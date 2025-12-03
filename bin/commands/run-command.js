@@ -44,13 +44,7 @@ async function processTargetFile(parser, toolRunner, reportGenerator, geeseData,
     // Generate prompt
     const prompt = parser.renderTemplate(geeseData.template, context);
     
-    if (dryRun) {
-      console.log(chalk.cyan(`    📝 Dry run - prompt preview:`));
-      console.log(chalk.gray('    ' + prompt.substring(0, 150).replace(/\n/g, '\n    ') + '...'));
-      return null;
-    }
-    
-    // Execute tool
+    // Execute tool (runner handles dry-run internally)
     const result = await toolRunner.processFile(targetFile, prompt, context._gooseConfig);
     const endTime = Date.now();
     
@@ -159,8 +153,19 @@ async function runCommand(container, directory, options) {
     toolRunner.setPath(options.goosePath || toolConfig.path);
   }
   
+  // Configure runner type based on dry-run options
+  if (options.dryRunFile) {
+    // File writer runner for dry-run with file output
+    toolRunner.setRunnerType('file', { outputPath: options.dryRunFile });
+    console.log(chalk.cyan(`🔍 Dry-run mode: Writing commands to ${options.dryRunFile}`));
+  } else if (options.dryRun) {
+    // Console logger runner for dry-run without file
+    toolRunner.setRunnerType('console');
+    console.log(chalk.cyan('🔍 Dry-run mode: Logging to console'));
+  }
+  
   // Check if tool is available (unless dry run)
-  if (!options.dryRun) {
+  if (!options.dryRun && !options.dryRunFile) {
     const isAvailable = await toolRunner.checkAvailable();
     if (!isAvailable) {
       console.log(chalk.yellow(`⚠️  Warning: ${tool} not found in PATH.`));
@@ -175,6 +180,7 @@ async function runCommand(container, directory, options) {
       
       if (continueAnyway) {
         options.dryRun = true;
+        toolRunner.setRunnerType('console');
       } else {
         process.exit(1);
       }

@@ -1,15 +1,13 @@
-const CLIRunner = require('./cli-runner');
-const GooseProvider = require('./providers/GooseProvider');
-const ToolExecutor = require('./ToolExecutor');
+const IAIToolProvider = require('../interfaces/IAIToolProvider');
 
-class GooseRunner extends CLIRunner {
-  constructor() {
-    super();
-    // Create provider and executor for new architecture
-    this._provider = new GooseProvider();
-    this._executor = new ToolExecutor(this._provider);
-  }
-
+/**
+ * Goose tool provider implementation
+ * Manages command structure for the Goose AI tool
+ * 
+ * @class
+ * @extends IAIToolProvider
+ */
+class GooseProvider extends IAIToolProvider {
   /**
    * Get the default executable path for goose
    * @returns {string} Default executable path
@@ -97,62 +95,6 @@ Please provide:
     
     return args;
   }
-
-  /**
-   * Execute goose with the provided prompt and configuration
-   * @param {string} prompt - The prompt to send to goose
-   * @param {Object} config - Goose configuration options
-   * @returns {Promise<Object>} Response with output and metadata
-   */
-  async executeGoose(prompt, config = {}) {
-    return this.execute(prompt, config);
-  }
-
-  /**
-   * Set custom goose path (for backward compatibility)
-   * @param {string} goosePath - Path to goose executable
-   */
-  setGoosePath(goosePath) {
-    this.setPath(goosePath);
-  }
-
-  /**
-   * Check if goose is available (for backward compatibility)
-   * @returns {Promise<boolean>} True if goose is available
-   */
-  async checkGoeseAvailable() {
-    return this.checkAvailable();
-  }
-
-  /**
-   * Get the tool executor (new architecture)
-   * @returns {ToolExecutor} Tool executor instance
-   */
-  getExecutor() {
-    return this._executor;
-  }
-
-  /**
-   * Set the runner type for this tool
-   * Enables switching between real, console, file, and memory runners
-   * 
-   * @param {string} runnerType - Runner type: 'real', 'console', 'file', 'memory'
-   * @param {Object} [options] - Runner-specific options
-   * @param {string} [options.outputPath] - Output file path (for 'file' runner)
-   * @param {Object} [options.mockResponse] - Mock response (for 'memory' runner)
-   */
-  setRunnerType(runnerType, options = {}) {
-    this._executor = ToolExecutor.create(this._provider, runnerType, options);
-  }
-
-  /**
-   * Override setPath to update both CLIRunner and ToolExecutor
-   * @param {string} toolPath - Path to executable
-   */
-  setPath(toolPath) {
-    super.setPath(toolPath);
-    this._executor.setPath(toolPath);
-  }
 }
 
-module.exports = GooseRunner;
+module.exports = GooseProvider;
