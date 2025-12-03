@@ -9,6 +9,10 @@ const DirectoryWalker = require('./utils/directory-walker');
  * Manages different tool implementations (goose, aider, etc.)
  */
 class ToolRegistry {
+  /**
+   * Create a new ToolRegistry
+   * Initializes the registry and registers default tools (currently: 'goose')
+   */
   constructor() {
     this.tools = new Map();
     this.toolSources = new Map(); // Track where each runner came from
@@ -17,6 +21,7 @@ class ToolRegistry {
 
   /**
    * Register default tools
+   * @private
    */
   registerDefaultTools() {
     this.register('goose', GooseRunner, 'builtin');

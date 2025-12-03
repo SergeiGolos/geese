@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 
+/**
+ * @fileoverview Main CLI entry point for the Geese tool.
+ * Provides commands for managing .geese files, configuration, custom pipes, and tool runners.
+ * Supports AI-powered file processing and transformation workflows.
+ */
+
 const { Command } = require('commander');
 const chalk = require('chalk').default || require('chalk');
 
