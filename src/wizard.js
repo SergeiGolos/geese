@@ -234,6 +234,35 @@ class Wizard {
   }
 
   /**
+   * Get current value for a property, checking all possible prefixes
+   * @param {Object} frontmatter - Frontmatter object
+   * @param {string} prop - Property name
+   * @returns {*} Current value or undefined
+   */
+  getCurrentValue(frontmatter, prop) {
+    return frontmatter[prop] || frontmatter[`$${prop}`] || frontmatter[`@${prop}`];
+  }
+
+  /**
+   * Clean up legacy @ prefixes and migrate to $ prefix
+   * For backward compatibility with old .geese files
+   * @param {Object} frontmatter - Frontmatter object to clean
+   * @returns {Object} Cleaned frontmatter object
+   */
+  cleanupLegacyPrefixes(frontmatter) {
+    for (const key of Object.keys(frontmatter)) {
+      if (key.startsWith('@')) {
+        const newKey = `$${key.slice(1)}`;
+        if (!frontmatter[newKey]) {
+          frontmatter[newKey] = frontmatter[key];
+        }
+        delete frontmatter[key];
+      }
+    }
+    return frontmatter;
+  }
+
+  /**
    * Run the wizard to collect all frontmatter properties
    * @param {Object} initialFrontmatter - Initial frontmatter values
    * @returns {Promise<Object>} Complete frontmatter object
@@ -248,7 +277,7 @@ class Wizard {
     // Prompt for required properties
     console.log(chalk.yellow('📋 Required Properties'));
     for (const prop of required) {
-      const currentValue = frontmatter[prop] || frontmatter[`$${prop}`] || frontmatter[`@${prop}`];
+      const currentValue = this.getCurrentValue(frontmatter, prop);
       const value = await this.promptForProperty(prop, currentValue);
       frontmatter[`$${prop}`] = value;
       // Remove non-prefixed version
@@ -283,7 +312,7 @@ class Wizard {
 
       // Prompt for selected optional properties
       for (const prop of selectedOptional) {
-        const currentValue = frontmatter[prop] || frontmatter[`$${prop}`] || frontmatter[`@${prop}`];
+        const currentValue = this.getCurrentValue(frontmatter, prop);
         const value = await this.promptForProperty(prop, currentValue);
         frontmatter[`$${prop}`] = value;
         // Remove non-prefixed version
@@ -291,16 +320,8 @@ class Wizard {
       }
     }
 
-    // Clean up old prefix formats
-    for (const key of Object.keys(frontmatter)) {
-      if (key.startsWith('@')) {
-        const newKey = `$${key.slice(1)}`;
-        if (!frontmatter[newKey]) {
-          frontmatter[newKey] = frontmatter[key];
-        }
-        delete frontmatter[key];
-      }
-    }
+    // Clean up legacy @ prefixes for backward compatibility
+    this.cleanupLegacyPrefixes(frontmatter);
 
     console.log(chalk.green('\n✅ Configuration complete!'));
     return frontmatter;
