@@ -9,6 +9,11 @@ const PropertyMetadata = require('./property-metadata');
 const PromptBuilder = require('./prompt-builder');
 
 class Wizard {
+  /**
+   * @param {Object} toolRunner - Tool runner instance
+   * @param {Class} [promptBuilder=null] - PromptBuilder class (or compatible class with static methods)
+   * @param {Class} [metadataProvider=null] - PropertyMetadata class (or compatible class with static methods)
+   */
   constructor(toolRunner, promptBuilder = null, metadataProvider = null) {
     this.toolRunner = toolRunner;
     this.schema = toolRunner.getFrontmatterSchema();
