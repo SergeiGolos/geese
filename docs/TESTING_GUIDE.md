@@ -29,7 +29,7 @@ The Geese project follows these testing principles:
 1. **Simple and Fast** - Uses lightweight custom test framework, no heavy dependencies
 2. **Unit-Focused** - Tests individual units of functionality in isolation
 3. **Integration Where Needed** - CLI tests validate end-to-end workflows
-4. **Comprehensive Coverage** - 181+ tests covering all major functionality
+4. **Comprehensive Coverage** - 267 tests covering all major functionality
 5. **Deterministic** - Tests are predictable and don't rely on external services
 6. **Self-Documenting** - Test names clearly describe what they test
 
