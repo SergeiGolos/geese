@@ -1,0 +1,14 @@
+---
+_include:
+  - "*.js"
+_exclude:
+  - "node_modules/**"
+_recipe: "test-recipe"
+_model: "gpt-4"
+project_name: "Test Project"
+---
+
+Test prompt for {{filename}}
+
+Content:
+{{content}}
