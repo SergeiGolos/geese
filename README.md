@@ -310,6 +310,53 @@ complex: "value: with colons" ~> operation
 - `default fallback` - Use fallback if empty
 - `echo` - Debug output (prints to console)
 
+**Text Operations (grep-like):**
+- `grep pattern [flags] [options]` - Search for lines matching a pattern (like grep command)
+  - flags: Optional regex flags (e.g., 'i' for case-insensitive)
+  - options: 'v' to invert match (like grep -v)
+  - Example: `content ~> grep "^Error"` - Find lines starting with "Error"
+  - Example: `logs ~> grep "warning" i` - Case-insensitive search
+  - Example: `text ~> grep "debug" "" v` - Exclude lines with "debug"
+- `grepCount pattern [flags]` - Count lines matching a pattern
+  - Example: `logs ~> grepCount "Error"` - Count error lines
+- `grepFirst pattern [flags]` - Get first line matching a pattern
+  - Example: `logs ~> grepFirst "^Fatal"` - Get first fatal error
+
+**JSON Query Operations (jq-like):**
+- `jqSelect path...` - Select a value from JSON using a path
+  - Example: `data ~> parseJson ~> jqSelect user name` - Get user.name
+  - Example: `json ~> jqSelect items 0` - Get first array element
+- `jqKeys` - Get all keys from a JSON object
+  - Example: `{"a":1,"b":2} ~> jqKeys` - Returns ["a","b"]
+- `jqValues` - Get all values from a JSON object/array
+  - Example: `{"a":1,"b":2} ~> jqValues` - Returns [1,2]
+- `jqFilter property operator value` - Filter array elements based on a condition
+  - Operators: ==, !=, >, <, >=, <=, contains
+  - Example: `users ~> jqFilter age > 18` - Filter users over 18
+  - Example: `items ~> jqFilter status == active` - Filter active items
+  - Example: `names ~> jqFilter "" contains "a"` - Filter strings containing "a"
+- `jqMap property` - Extract property from array of objects
+  - Example: `users ~> jqMap name` - Extract all names
+- `jqLength` - Get length of array or number of keys in object
+  - Example: `data ~> jqLength` - Get size
+- `jqHas key` - Check if object has a key
+  - Example: `config ~> jqHas debug` - Returns true/false
+
+**Glob Operations (file pattern matching):**
+- `globMatch pattern [flags]` - Test if string matches a glob pattern
+  - Example: `"test.js" ~> globMatch "*.js"` - Returns true
+  - Example: `filename ~> globMatch "**/*.ts" i` - Case-insensitive match
+- `globFilter pattern [mode]` - Filter array of strings by glob pattern
+  - mode: 'include' (default) or 'exclude'
+  - Example: `files ~> globFilter "*.js"` - Include only .js files
+  - Example: `files ~> globFilter "*.test.js" exclude` - Exclude test files
+- `globFilterMulti includePatterns [excludePatterns]` - Filter by multiple patterns
+  - Patterns can be comma-separated or JSON arrays
+  - Example: `files ~> globFilterMulti "*.js,*.ts"` - Include .js and .ts
+  - Example: `files ~> globFilterMulti "**/*.js" "**/*.test.js"` - .js but not tests
+- `globExtract pattern` - Extract string if it matches glob pattern
+  - Example: `path ~> globExtract "src/**/*.js"` - Returns path if matches
+
 #### Custom Pipe Operations
 
 Create custom pipe operations for your specific needs:
@@ -805,6 +852,77 @@ npm test
 ```
 
 ### Example .geese Files
+
+#### Log Analysis with Text Operations
+
+```yaml
+---
+$include:
+  - "logs/**/*.log"
+$recipe: "analyze-logs"
+error_lines: "./app.log" ~> readFile ~> grep "^ERROR"
+error_count: "./app.log" ~> readFile ~> grepCount "ERROR"
+warning_count: "./app.log" ~> readFile ~> grepCount "WARNING"
+first_error: "./app.log" ~> readFile ~> grepFirst "^ERROR"
+---
+
+Log Analysis Report for {{filename}}
+
+Total Errors: {{error_count}}
+Total Warnings: {{warning_count}}
+First Error: {{first_error}}
+
+All Error Lines:
+{{error_lines}}
+
+Please analyze these errors and suggest fixes.
+```
+
+#### JSON Data Processing with jq Operations
+
+```yaml
+---
+$include:
+  - "data/**/*.json"
+$recipe: "process-json"
+user_names: "{{content}}" ~> parseJson ~> jqSelect users ~> jqMap name
+active_users: "{{content}}" ~> parseJson ~> jqSelect users ~> jqFilter status == active
+user_count: "{{content}}" ~> parseJson ~> jqSelect users ~> jqLength
+has_admin: "{{content}}" ~> parseJson ~> jqHas admin
+---
+
+JSON Data Summary for {{filename}}
+
+Total Users: {{user_count}}
+Has Admin Field: {{has_admin}}
+
+Active Users: {{active_users}}
+
+User Names: {{user_names}}
+
+Please analyze this user data and provide insights.
+```
+
+#### File Filtering with Glob Operations
+
+```yaml
+---
+$include:
+  - "src/**/*"
+$recipe: "process-files"
+# Example using glob operations in template (if you have a list of files)
+js_files: '["src/app.js", "src/test.ts", "src/main.js"]' ~> parseJson ~> globFilter "*.js"
+non_test_files: '["app.test.js", "main.js", "util.spec.js"]' ~> parseJson ~> globFilter "*.test.js" exclude
+---
+
+Processing file: {{filename}}
+
+JS Files: {{js_files}}
+Non-Test Files: {{non_test_files}}
+
+File content:
+{{content}}
+```
 
 #### Code Review Template
 

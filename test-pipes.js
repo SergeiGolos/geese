@@ -372,6 +372,191 @@ test('Parser collectTargetFiles works with $ prefix', () => {
   fs.removeSync(tempDir);
 });
 
+// Test 14: Text operations (grep)
+test('grep operation finds matching lines', () => {
+  const text = 'line1\nError: test\nline3\nError: fail';
+  const result = pipeOperations.execute('grep', text, ['^Error'], {});
+  assertEquals(result, ['Error: test', 'Error: fail']);
+});
+
+test('grep operation with case-insensitive flag', () => {
+  const text = 'Hello\nWORLD\nhello world';
+  const result = pipeOperations.execute('grep', text, ['hello', 'i'], {});
+  assertEquals(result, ['Hello', 'hello world']);
+});
+
+test('grep operation with invert match', () => {
+  const text = 'line1\nError: test\nline3';
+  const result = pipeOperations.execute('grep', text, ['Error', '', 'v'], {});
+  assertEquals(result, ['line1', 'line3']);
+});
+
+test('grepCount operation counts matching lines', () => {
+  const text = 'line1\nline2\ntest\nline4';
+  const result = pipeOperations.execute('grepCount', text, ['line'], {});
+  assertEquals(result, 3);
+});
+
+test('grepFirst operation gets first match', () => {
+  const text = 'line1\nError: test\nError: fail';
+  const result = pipeOperations.execute('grepFirst', text, ['^Error'], {});
+  assertEquals(result, 'Error: test');
+});
+
+// Test 15: JSON query operations (jq-like)
+test('jqSelect operation selects nested value', () => {
+  const obj = { user: { name: 'John', age: 30 } };
+  const result = pipeOperations.execute('jqSelect', obj, ['user', 'name'], {});
+  assertEquals(result, 'John');
+});
+
+test('jqSelect operation selects array element', () => {
+  const obj = { items: [1, 2, 3] };
+  const result = pipeOperations.execute('jqSelect', obj, ['items', '1'], {});
+  assertEquals(result, 2);
+});
+
+test('jqKeys operation gets object keys', () => {
+  const obj = { a: 1, b: 2, c: 3 };
+  const result = pipeOperations.execute('jqKeys', obj, [], {});
+  assertEquals(result, ['a', 'b', 'c']);
+});
+
+test('jqValues operation gets object values', () => {
+  const obj = { a: 1, b: 2 };
+  const result = pipeOperations.execute('jqValues', obj, [], {});
+  assertEquals(result, [1, 2]);
+});
+
+test('jqValues operation gets array values', () => {
+  const arr = [1, 2, 3];
+  const result = pipeOperations.execute('jqValues', arr, [], {});
+  assertEquals(result, [1, 2, 3]);
+});
+
+test('jqFilter operation filters by equality', () => {
+  const arr = [{ status: 'active' }, { status: 'inactive' }, { status: 'active' }];
+  const result = pipeOperations.execute('jqFilter', arr, ['status', '==', 'active'], {});
+  assertEquals(result, [{ status: 'active' }, { status: 'active' }]);
+});
+
+test('jqFilter operation filters by comparison', () => {
+  const arr = [{ age: 25 }, { age: 30 }, { age: 35 }];
+  const result = pipeOperations.execute('jqFilter', arr, ['age', '>', '28'], {});
+  assertEquals(result, [{ age: 30 }, { age: 35 }]);
+});
+
+test('jqFilter operation filters with contains', () => {
+  const arr = ['apple', 'banana', 'cherry'];
+  const result = pipeOperations.execute('jqFilter', arr, ['', 'contains', 'a'], {});
+  assertEquals(result, ['apple', 'banana']);
+});
+
+test('jqMap operation extracts property', () => {
+  const arr = [{ name: 'Alice' }, { name: 'Bob' }];
+  const result = pipeOperations.execute('jqMap', arr, ['name'], {});
+  assertEquals(result, ['Alice', 'Bob']);
+});
+
+test('jqLength operation gets array length', () => {
+  const arr = [1, 2, 3, 4];
+  const result = pipeOperations.execute('jqLength', arr, [], {});
+  assertEquals(result, 4);
+});
+
+test('jqLength operation gets object length', () => {
+  const obj = { a: 1, b: 2, c: 3 };
+  const result = pipeOperations.execute('jqLength', obj, [], {});
+  assertEquals(result, 3);
+});
+
+test('jqHas operation checks key existence', () => {
+  const obj = { a: 1, b: 2 };
+  const result = pipeOperations.execute('jqHas', obj, ['a'], {});
+  assertEquals(result, true);
+});
+
+test('jqHas operation returns false for missing key', () => {
+  const obj = { a: 1, b: 2 };
+  const result = pipeOperations.execute('jqHas', obj, ['c'], {});
+  assertEquals(result, false);
+});
+
+// Test 16: Glob operations
+test('globMatch operation matches pattern', () => {
+  const result = pipeOperations.execute('globMatch', 'test.js', ['*.js'], {});
+  assertEquals(result, true);
+});
+
+test('globMatch operation does not match wrong pattern', () => {
+  const result = pipeOperations.execute('globMatch', 'test.ts', ['*.js'], {});
+  assertEquals(result, false);
+});
+
+test('globMatch operation with nested path', () => {
+  const result = pipeOperations.execute('globMatch', 'src/app.js', ['**/*.js'], {});
+  assertEquals(result, true);
+});
+
+test('globMatch operation case-insensitive', () => {
+  const result = pipeOperations.execute('globMatch', 'TEST.JS', ['*.js', 'i'], {});
+  assertEquals(result, true);
+});
+
+test('globFilter operation includes matching items', () => {
+  const files = ['test.js', 'app.ts', 'main.js'];
+  const result = pipeOperations.execute('globFilter', files, ['*.js'], {});
+  assertEquals(result, ['test.js', 'main.js']);
+});
+
+test('globFilter operation excludes matching items', () => {
+  const files = ['test.js', 'app.ts', 'main.js'];
+  const result = pipeOperations.execute('globFilter', files, ['*.js', 'exclude'], {});
+  assertEquals(result, ['app.ts']);
+});
+
+test('globFilterMulti operation with include patterns', () => {
+  const files = ['a.js', 'b.ts', 'c.js', 'd.txt'];
+  const result = pipeOperations.execute('globFilterMulti', files, ['*.js,*.ts'], {});
+  assertEquals(result, ['a.js', 'b.ts', 'c.js']);
+});
+
+test('globFilterMulti operation with include and exclude', () => {
+  const files = ['app.js', 'app.test.js', 'main.js', 'test.spec.js'];
+  const result = pipeOperations.execute('globFilterMulti', files, ['*.js', '*.test.js,*.spec.js'], {});
+  assertEquals(result, ['app.js', 'main.js']);
+});
+
+test('globExtract operation returns match', () => {
+  const result = pipeOperations.execute('globExtract', 'src/app.js', ['**/*.js'], {});
+  assertEquals(result, 'src/app.js');
+});
+
+test('globExtract operation returns null on no match', () => {
+  const result = pipeOperations.execute('globExtract', 'src/app.ts', ['**/*.js'], {});
+  assertEquals(result, null);
+});
+
+// Test 17: Complex pipe chains with new operations
+test('Complex chain: parse JSON and query with jqSelect', () => {
+  const jsonStr = '{"user":{"name":"Alice","age":25}}';
+  const result = pipeOperations.executePipeChain(jsonStr + ' ~> parseJson ~> jqSelect user name', {});
+  assertEquals(result, 'Alice');
+});
+
+test('Complex chain: grep and count', () => {
+  const text = 'Error: test\nInfo: data\nError: fail';
+  const result = pipeOperations.executePipeChain(text + ' ~> grep ^Error ~> length', {});
+  assertEquals(result, 2);
+});
+
+test('Complex chain: jqFilter and jqMap', () => {
+  const data = [{ name: 'Alice', age: 25 }, { name: 'Bob', age: 30 }, { name: 'Charlie', age: 20 }];
+  const chain = JSON.stringify(data) + ' ~> parseJson ~> jqFilter age > 22 ~> jqMap name';
+  const result = pipeOperations.executePipeChain(chain, {});
+  assertEquals(result, ['Alice', 'Bob']);
+});
+
 console.log(chalk.bold('\n=================================================='));
 console.log(chalk.green('Passed:'), passed);
 console.log(chalk.red('Failed:'), failed);
