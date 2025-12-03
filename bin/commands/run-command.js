@@ -35,7 +35,7 @@ function getFileSize(filePath) {
  * @param {number} fileIndex - Index of file in processing queue (optional)
  * @returns {Promise<Object|null>} Session object or null
  */
-async function processTargetFile(parser, toolRunner, reportGenerator, geeseData, targetFile, dryRun = false, uiManager, fileIndex) {
+async function processTargetFile(parser, toolRunner, reportGenerator, geeseData, targetFile, dryRun, uiManager, fileIndex) {
   const startTime = Date.now();
   
   reportGenerator.logSessionStart(geeseData.filePath, targetFile);
@@ -97,7 +97,9 @@ async function processTargetFile(parser, toolRunner, reportGenerator, geeseData,
     );
     
     // Update UI with completion
-    uiManager.updateFileRow(fileIndex, session.tokens?.totalTokens || 0, result.success);
+    if (fileIndex >= 0) {
+      uiManager.updateFileRow(fileIndex, session.tokens?.totalTokens || 0, result.success);
+    }
     uiManager.addSession(session);
     uiManager.hideOutput();
     
@@ -128,7 +130,9 @@ async function processTargetFile(parser, toolRunner, reportGenerator, geeseData,
     );
     
     // Update UI with failure
-    uiManager.updateFileRow(fileIndex, 0, false);
+    if (fileIndex >= 0) {
+      uiManager.updateFileRow(fileIndex, 0, false);
+    }
     uiManager.addSession(session);
     uiManager.hideOutput();
     
