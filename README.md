@@ -12,10 +12,10 @@ Geese is a powerful CLI tool that processes `.geese` files to apply AI-powered t
 - **File Pattern Matching**: Include/exclude files with glob patterns
 - **Interactive Selection**: Choose which files to process with an intuitive CLI interface
 - **Comprehensive Logging**: Automatic markdown reports with detailed session information
-- **Configurable AI Integration**: Works with Goose AI assistant by default
+- **Configurable AI Integration**: Works with Goose and Gemini AI by default
 - **Dry Run Mode**: Preview what would be processed without executing
 - **Configuration Management**: Multi-level configuration with easy inspection and debugging
-- **Multiple Tools Support**: Extensible architecture for different AI CLI tools
+- **Multiple Tools Support**: Extensible architecture for different AI CLI tools (Goose, Gemini, and more)
 - **Easy File Creation**: Generate new .geese files with `geese new` (defaults to `.geese/` directory)
 
 ## 📦 Installation
@@ -593,11 +593,18 @@ Examples:
 
 ## 🔧 Custom Tool Runners
 
-Geese supports custom tool runners that allow you to integrate any CLI AI tool with the Geese workflow. Custom runners follow the same pattern as the built-in Goose runner.
+Geese supports custom tool runners that allow you to integrate any CLI AI tool with the Geese workflow. Custom runners follow the same pattern as the built-in runners.
+
+### Built-in Runners
+
+Geese comes with the following built-in AI tool runners:
+
+1. **Goose** - Default AI assistant for code generation and analysis
+2. **Gemini** - Google's Gemini AI for code review and generation
 
 ### Runner Hierarchy
 
-1. **Built-in**: Core runners (goose)
+1. **Built-in**: Core runners (goose, gemini)
 2. **Global**: `~/.geese/runners/` - User-wide custom runners
 3. **Local**: `./.geese/runners/` - Project-specific runners (highest priority)
 
@@ -661,6 +668,53 @@ geese new code-fix --tool aider
 
 # Process files with aider
 geese run
+```
+
+### Using the Built-in Gemini Runner
+
+Geese includes a built-in runner for Google's Gemini AI:
+
+```bash
+# Create a .geese file for Gemini
+geese new code-review --tool gemini
+
+# Configure Gemini settings
+geese config --set gemini.model gemini-pro
+geese config --set gemini.temperature 0.7
+
+# Process files with Gemini
+geese run
+```
+
+**Gemini Configuration Options:**
+- `model` - Model selection (default: `gemini-pro`)
+- `temperature` - Response creativity (0.0-1.0, default: 0.7)
+- `max_tokens` - Maximum response length (default: 2048)
+- `output_format` - Output format (text/markdown/json)
+- `stream` - Enable streaming responses (true/false)
+- `tools_enabled` - Enable Gemini tools
+- `safe_mode` - Enable safety restrictions
+- `log_level` - Logging level (error/warn/info/debug)
+
+**Example Gemini .geese file:**
+```yaml
+---
+_include:
+  - "src/**/*.js"
+_exclude:
+  - "node_modules/**"
+model: "gemini-pro"
+temperature: 0.7
+max_tokens: 2048
+output_format: "markdown"
+stream: true
+safe_mode: true
+---
+
+Please review this code for quality and security.
+
+File: {{filename}}
+Content: {{content}}
 ```
 
 For detailed documentation on creating custom runners, see [Custom Tool Runners Guide](docs/CUSTOM_TOOL_RUNNERS.md).

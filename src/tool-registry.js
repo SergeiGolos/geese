@@ -1,4 +1,5 @@
 const GooseRunner = require('./goose-runner');
+const GeminiRunner = require('./gemini-runner');
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
@@ -6,12 +7,12 @@ const DirectoryWalker = require('./utils/directory-walker');
 
 /**
  * Registry for CLI tool runners
- * Manages different tool implementations (goose, aider, etc.)
+ * Manages different tool implementations (goose, gemini, aider, etc.)
  */
 class ToolRegistry {
   /**
    * Create a new ToolRegistry
-   * Initializes the registry and registers default tools (currently: 'goose')
+   * Initializes the registry and registers default tools (currently: 'goose', 'gemini')
    */
   constructor() {
     this.tools = new Map();
@@ -25,6 +26,7 @@ class ToolRegistry {
    */
   registerDefaultTools() {
     this.register('goose', GooseRunner, 'builtin');
+    this.register('gemini', GeminiRunner, 'builtin');
   }
 
   /**
