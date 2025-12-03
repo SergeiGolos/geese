@@ -12,11 +12,22 @@ class Wizard {
   }
 
   /**
-   * Get property metadata (options, hints, defaults)
+   * Get property metadata (options, hints, defaults) from the tool runner.
+   * Tool runners can optionally implement getPropertyMetadata(property) to provide
+   * tool-specific metadata. Falls back to common defaults if not available.
    * @param {string} property - Property name
    * @returns {Object} Property metadata
    */
   getPropertyMetadata(property) {
+    // Check if tool runner provides custom metadata
+    if (typeof this.toolRunner.getPropertyMetadata === 'function') {
+      const toolMeta = this.toolRunner.getPropertyMetadata(property);
+      if (toolMeta) {
+        return toolMeta;
+      }
+    }
+    
+    // Fallback to common metadata for standard properties
     const metadata = {
       include: {
         type: 'array',
@@ -70,6 +81,7 @@ class Wizard {
    * @param {string} property - Property name
    * @param {*} currentValue - Current/default value
    * @returns {Promise<*>} User-selected value
+   * @throws {Error} If the prompt cannot be displayed or user cancels
    */
   async promptForProperty(property, currentValue) {
     const metadata = this.getPropertyMetadata(property);
@@ -147,17 +159,20 @@ class Wizard {
    * @returns {Promise<Array>} Array of values
    */
   async promptArray(name, defaultValue) {
+    // Handle undefined or non-array defaultValue
+    const safeDefault = Array.isArray(defaultValue) ? defaultValue : [];
+    
     const { useDefaults } = await inquirer.prompt([
       {
         type: 'confirm',
         name: 'useDefaults',
-        message: `Use default ${name}? [${defaultValue.join(', ')}]`,
+        message: `Use default ${name}? [${safeDefault.join(', ')}]`,
         default: true
       }
     ]);
 
     if (useDefaults) {
-      return defaultValue;
+      return safeDefault;
     }
 
     const items = [];
@@ -179,7 +194,7 @@ class Wizard {
       }
     }
 
-    return items.length > 0 ? items : defaultValue;
+    return items.length > 0 ? items : safeDefault;
   }
 
   /**
@@ -192,18 +207,19 @@ class Wizard {
   async promptNumber(name, metadata, defaultValue) {
     const { value } = await inquirer.prompt([
       {
-        type: 'number',
+        type: 'input',
         name: 'value',
         message: `Enter ${name}:`,
-        default: defaultValue,
+        default: String(defaultValue),
         validate: (input) => {
-          if (isNaN(input)) {
+          const num = parseFloat(input);
+          if (isNaN(num)) {
             return 'Please enter a valid number';
           }
-          if (metadata.min !== undefined && input < metadata.min) {
+          if (metadata.min !== undefined && num < metadata.min) {
             return `Value must be at least ${metadata.min}`;
           }
-          if (metadata.max !== undefined && input > metadata.max) {
+          if (metadata.max !== undefined && num > metadata.max) {
             return `Value must be at most ${metadata.max}`;
           }
           return true;
@@ -211,7 +227,7 @@ class Wizard {
       }
     ]);
 
-    return value;
+    return parseFloat(value);
   }
 
   /**
@@ -266,65 +282,80 @@ class Wizard {
    * Run the wizard to collect all frontmatter properties
    * @param {Object} initialFrontmatter - Initial frontmatter values
    * @returns {Promise<Object>} Complete frontmatter object
+   * @throws {Error} If prompts fail or wizard is cancelled
    */
   async run(initialFrontmatter = {}) {
-    console.log(chalk.blue('\n🧙 Geese File Wizard'));
-    console.log(chalk.gray('This wizard will help you create a .geese file with proper configuration.\n'));
+    try {
+      console.log(chalk.blue('\n🧙 Geese File Wizard'));
+      console.log(chalk.gray('This wizard will help you create a .geese file with proper configuration.\n'));
 
-    const frontmatter = { ...initialFrontmatter };
-    const { required, optional } = this.schema;
+      const frontmatter = { ...initialFrontmatter };
+      const { required, optional } = this.schema;
 
-    // Prompt for required properties
-    console.log(chalk.yellow('📋 Required Properties'));
-    for (const prop of required) {
-      const currentValue = this.getCurrentValue(frontmatter, prop);
-      const value = await this.promptForProperty(prop, currentValue);
-      frontmatter[`$${prop}`] = value;
-      // Remove non-prefixed version
-      delete frontmatter[prop];
-    }
-
-    // Ask if user wants to configure optional properties
-    console.log(chalk.yellow('\n⚙️  Optional Properties'));
-    const { configureOptional } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'configureOptional',
-        message: 'Would you like to configure optional properties?',
-        default: true
-      }
-    ]);
-
-    if (configureOptional) {
-      // Let user select which optional properties to configure
-      const { selectedOptional } = await inquirer.prompt([
-        {
-          type: 'checkbox',
-          name: 'selectedOptional',
-          message: 'Select optional properties to configure:',
-          choices: optional.map(prop => ({
-            name: prop,
-            value: prop,
-            checked: frontmatter[prop] !== undefined || frontmatter[`$${prop}`] !== undefined
-          }))
-        }
-      ]);
-
-      // Prompt for selected optional properties
-      for (const prop of selectedOptional) {
+      // Prompt for required properties
+      console.log(chalk.yellow('📋 Required Properties'));
+      for (const prop of required) {
         const currentValue = this.getCurrentValue(frontmatter, prop);
         const value = await this.promptForProperty(prop, currentValue);
         frontmatter[`$${prop}`] = value;
-        // Remove non-prefixed version
-        delete frontmatter[prop];
+        // Remove non-prefixed version if it exists
+        if (frontmatter[prop] !== undefined) {
+          delete frontmatter[prop];
+        }
       }
+
+      // Ask if user wants to configure optional properties
+      console.log(chalk.yellow('\n⚙️  Optional Properties'));
+      const { configureOptional } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'configureOptional',
+          message: 'Would you like to configure optional properties?',
+          default: true
+        }
+      ]);
+
+      if (configureOptional) {
+        // Let user select which optional properties to configure
+        const { selectedOptional } = await inquirer.prompt([
+          {
+            type: 'checkbox',
+            name: 'selectedOptional',
+            message: 'Select optional properties to configure:',
+            choices: optional.map(prop => ({
+              name: prop,
+              value: prop,
+              checked: frontmatter[prop] !== undefined || frontmatter[`$${prop}`] !== undefined
+            }))
+          }
+        ]);
+
+        // Prompt for selected optional properties
+        for (const prop of selectedOptional) {
+          const currentValue = this.getCurrentValue(frontmatter, prop);
+          const value = await this.promptForProperty(prop, currentValue);
+          frontmatter[`$${prop}`] = value;
+          // Remove non-prefixed version if it exists
+          if (frontmatter[prop] !== undefined) {
+            delete frontmatter[prop];
+          }
+        }
+      }
+
+      // Clean up legacy @ prefixes for backward compatibility
+      this.cleanupLegacyPrefixes(frontmatter);
+
+      console.log(chalk.green('\n✅ Configuration complete!'));
+      return frontmatter;
+    } catch (error) {
+      if (error.isTtyError) {
+        throw new Error('Wizard cannot run in non-interactive environment');
+      } else if (error.name === 'ExitPromptError') {
+        console.log(chalk.yellow('\n✗ Wizard cancelled'));
+        throw error;
+      }
+      throw error;
     }
-
-    // Clean up legacy @ prefixes for backward compatibility
-    this.cleanupLegacyPrefixes(frontmatter);
-
-    console.log(chalk.green('\n✅ Configuration complete!'));
-    return frontmatter;
   }
 }
 
