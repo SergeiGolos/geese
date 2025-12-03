@@ -389,6 +389,7 @@ class UIManager {
 
   /**
    * Get file size in human-readable format
+   * Note: Uses synchronous operation for simplicity in UI initialization
    * @param {string} filePath - Path to file
    * @returns {string} Formatted file size
    */
@@ -407,6 +408,7 @@ class UIManager {
 
   /**
    * Get file updated time
+   * Note: Uses synchronous operation for simplicity in UI initialization
    * @param {string} filePath - Path to file
    * @returns {string} Formatted update time
    */
