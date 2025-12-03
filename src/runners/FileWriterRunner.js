@@ -104,9 +104,10 @@ ${body || '(no stdin content)'}
       if (Array.isArray(value)) {
         yaml += `${spaces}${key}:\n`;
         value.forEach(item => {
-          if (typeof item === 'object') {
+          if (typeof item === 'object' && item !== null) {
             yaml += `${spaces}  -\n`;
-            yaml += this._objectToYaml(item, indent + 2).replace(/^/gm, '  ');
+            const itemYaml = this._objectToYaml(item, indent + 2);
+            yaml += itemYaml;
           } else {
             yaml += `${spaces}  - ${this._escapeYamlValue(item)}\n`;
           }

@@ -69,7 +69,8 @@ async function runTests() {
   const executions = memoryRunner.getExecutions();
   assert(executions.length === 1, 'MemoryRunner stores execution');
   assert(executions[0].executablePath === 'goose', 'MemoryRunner stores correct executable path');
-  assert(executions[0].args.length === 1 && executions[0].args[0] === '--help', 'MemoryRunner stores correct args');
+  assert(executions[0].args.length === 1, 'MemoryRunner stores correct args length');
+  assert(executions[0].args[0] === '--help', 'MemoryRunner stores correct args content');
   assert(executions[0].stdin === 'test input', 'MemoryRunner stores correct stdin');
 
   const lastExecution = memoryRunner.getLastExecution();
