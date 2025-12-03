@@ -1,5 +1,4 @@
 const blessed = require('blessed');
-const contrib = require('blessed-contrib');
 const path = require('path');
 const fs = require('fs-extra');
 
@@ -8,6 +7,15 @@ const fs = require('fs-extra');
  * Handles property boxes, file tables, scrolling output, and summary cards
  */
 class UIManager {
+  // Table column widths
+  static COLUMN_WIDTHS = {
+    NAME: 32,
+    SIZE: 12,
+    TIME: 22,
+    TOKENS: 12,
+    STATUS: 8
+  };
+
   constructor() {
     this.screen = null;
     this.scrollableContainer = null;
@@ -199,26 +207,29 @@ class UIManager {
   updateTable() {
     if (!this.fileTableBox) return;
 
+    const { NAME, SIZE, TIME, TOKENS, STATUS } = UIManager.COLUMN_WIDTHS;
+    const totalWidth = NAME + SIZE + TIME + TOKENS + STATUS;
+
     // Build table content manually
     let tableContent = '';
     
     // Header
     tableContent += '{bold}';
-    tableContent += 'File Name'.padEnd(32) + 
-                   'Size'.padEnd(12) + 
-                   'Updated Time'.padEnd(22) + 
-                   'Tokens'.padEnd(12) + 
+    tableContent += 'File Name'.padEnd(NAME) + 
+                   'Size'.padEnd(SIZE) + 
+                   'Updated Time'.padEnd(TIME) + 
+                   'Tokens'.padEnd(TOKENS) + 
                    'Status\n';
     tableContent += '{/bold}';
-    tableContent += '─'.repeat(90) + '\n';
+    tableContent += '─'.repeat(totalWidth) + '\n';
     
     // Data rows
     for (const row of this.fileRows) {
       const [name, size, time, tokens, status] = row;
-      tableContent += name.padEnd(32) + 
-                     size.padEnd(12) + 
-                     time.padEnd(22) + 
-                     tokens.padEnd(12) + 
+      tableContent += name.padEnd(NAME) + 
+                     size.padEnd(SIZE) + 
+                     time.padEnd(TIME) + 
+                     tokens.padEnd(TOKENS) + 
                      status + '\n';
     }
     
