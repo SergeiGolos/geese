@@ -368,7 +368,7 @@ test('Wizard getCurrentValue handles different prefixes', () => {
 });
 
 // Test 22: Wizard cleanupLegacyPrefixes converts @ and $ to _
-test('Wizard cleanupLegacyPrefixes converts @ to $', () => {
+test('Wizard cleanupLegacyPrefixes converts @ and $ to _', () => {
   const Wizard = require('./src/wizard');
   const ToolRegistry = require('./src/tool-registry');
   const toolRegistry = new ToolRegistry();

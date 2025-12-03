@@ -205,7 +205,7 @@ class GeeseParser {
    * @param {string} pattern - Pattern to process
    * @param {Object} context - Context for template/pipe evaluation
    * @param {string} patternType - Type of pattern (for error messages)
-   * @returns {string} Processed pattern
+   * @returns {string|Array} Processed pattern (can be array if pipes return array)
    * @private
    */
   processPattern(pattern, context, patternType) {
@@ -301,8 +301,8 @@ class GeeseParser {
     const gooseConfig = {};
     
     // STEP 1: Add hidden system-level variables (automatically bound at system level)
-    context.geese_file = filename; // Changed from geese-file to match naming convention
-    context.working_dir = process.cwd(); // Changed from working-dir to match naming convention
+    context.geese_file = filename; // Hidden system variable: name of the .geese file (without extension)
+    context.working_dir = process.cwd(); // Hidden system variable: current working directory
     
     // STEP 2: Process system-level properties
     // Separate system properties (_ prefix) from user properties
