@@ -6,14 +6,14 @@ const glob = require('glob');
 const PipeOperations = require('./pipe-operations');
 const SchemaValidator = require('./utils/schema-validator');
 
-// System properties that control geese behavior (use $ prefix for visual distinction)
+// System properties that control geese behavior (use _ prefix to identify them)
 const SYSTEM_PROPERTIES = [
-  '$include', '$exclude', '$recipe', '$model', 
-  '$temperature', '$max_tokens', '$config', '$profile',
-  '$resume', '$log_level', '$no_color', '$flags'
+  '_include', '_exclude', '_recipe', '_model', 
+  '_temperature', '_max_tokens', '_config', '_profile',
+  '_resume', '_log_level', '_no_color', '_flags'
 ];
 
-// Extract property names without $ prefix for backward compatibility checks
+// Extract property names without _ prefix for backward compatibility checks
 const SYSTEM_PROPERTY_NAMES = SYSTEM_PROPERTIES.map(prop => prop.substring(1));
 
 class GeeseParser {
@@ -47,11 +47,13 @@ class GeeseParser {
     try {
       let fileContent = fs.readFileSync(filePath, 'utf8');
       
-      // For backward compatibility: Convert @ prefix to $ prefix for system properties
-      // @include -> $include, @recipe -> $recipe, etc.
+      // For backward compatibility: Convert @ and $ prefixes to _ prefix for system properties
+      // @include -> _include, $include -> _include, @recipe -> _recipe, etc.
       const propertyPattern = SYSTEM_PROPERTY_NAMES.join('|');
-      const regex = new RegExp(`^(\\s*)@(${propertyPattern}):`, 'gm');
-      fileContent = fileContent.replace(regex, '$1$$$2:');
+      const regexAt = new RegExp(`^(\\s*)@(${propertyPattern}):`, 'gm');
+      const regexDollar = new RegExp(`^(\\s*)\\$(${propertyPattern}):`, 'gm');
+      fileContent = fileContent.replace(regexAt, '$1_$2:');
+      fileContent = fileContent.replace(regexDollar, '$1_$2:');
       
       // Auto-quote pipe operations if not already quoted
       // This allows users to write: key: "value" ~> operation
@@ -60,7 +62,7 @@ class GeeseParser {
       
       const parsed = matter(fileContent);
       
-      // Separate system properties ($) from user properties
+      // Separate system properties (_) from user properties
       const systemProps = {};
       const userProps = {};
       
@@ -68,11 +70,14 @@ class GeeseParser {
         // Ensure key is a string
         const keyStr = String(key);
         
-        if (keyStr.startsWith('$')) {
-          // System property with $ prefix
+        if (keyStr.startsWith('_')) {
+          // System property with _ prefix
+          systemProps[keyStr.substring(1)] = value; // Remove _ prefix
+        } else if (keyStr.startsWith('$')) {
+          // Backward compatibility: system property with $ prefix
           systemProps[keyStr.substring(1)] = value; // Remove $ prefix
         } else if (SYSTEM_PROPERTY_NAMES.includes(keyStr)) {
-          // Backward compatibility: system property without $ prefix
+          // Backward compatibility: system property without prefix
           systemProps[keyStr] = value;
         } else {
           // User property
@@ -87,7 +92,7 @@ class GeeseParser {
       // Reconstruct frontmatter with merged config and user properties
       const mergedFrontmatter = { ...userProps };
       for (const [key, value] of Object.entries(mergedConfig)) {
-        mergedFrontmatter['$' + key] = value;
+        mergedFrontmatter['_' + key] = value;
       }
       
       return {
@@ -202,9 +207,9 @@ class GeeseParser {
    * @returns {Array} Array of target file paths
    */
   collectTargetFiles(frontmatter, baseDir) {
-    // Support both $ prefix and no prefix for backward compatibility
-    const include = frontmatter.$include || frontmatter.include || [];
-    const exclude = frontmatter.$exclude || frontmatter.exclude || [];
+    // Support both _ prefix and no prefix for backward compatibility
+    const include = frontmatter._include || frontmatter.$include || frontmatter.include || [];
+    const exclude = frontmatter._exclude || frontmatter.$exclude || frontmatter.exclude || [];
     
     let allFiles = [];
     
@@ -227,6 +232,7 @@ class GeeseParser {
 
   /**
    * Prepare template context for a target file
+   * Load order: hidden system → system level → hidden context → context level
    * @param {Object} geeseData - Parsed .geese file data
    * @param {string} targetFile - Path to target file
    * @returns {Object} Template context
@@ -234,50 +240,93 @@ class GeeseParser {
   prepareContext(geeseData, targetFile) {
     const { frontmatter, filename, fileDir } = geeseData;
     
-    // Separate system properties ($ prefix) from user properties
+    // Initialize context and goose config
     const context = {};
     const gooseConfig = {};
     
-    // Add predefined properties
-    context.filename = path.basename(targetFile);
-    context.content = fs.readFileSync(targetFile, 'utf8');
-    context.filepath = targetFile;
-    context.geese_file = filename;
-    context._geeseFileDir = fileDir; // For pipe operations that need file resolution
+    // STEP 1: Add hidden system-level variables (automatically bound at system level)
+    context.geese_file = filename; // Changed from geese-file to match naming convention
+    context.working_dir = process.cwd(); // Changed from working-dir to match naming convention
     
-    // First pass: Separate system properties from user properties
+    // STEP 2: Process system-level properties
+    // Separate system properties (_ prefix) from user properties
+    const systemProperties = {};
     const userProperties = {};
+    
     for (const [key, value] of Object.entries(frontmatter)) {
-      if (key.startsWith('$')) {
-        // System property - strip $ and add to goose config
+      if (key.startsWith('_')) {
+        // System property - strip _ and add to system properties for processing
         const configKey = key.substring(1);
-        gooseConfig[configKey] = value;
+        systemProperties[configKey] = value;
+      } else if (key.startsWith('$')) {
+        // Backward compatibility for $ prefix - strip and add to system properties
+        const configKey = key.substring(1);
+        systemProperties[configKey] = value;
       } else if (SYSTEM_PROPERTY_NAMES.includes(key)) {
         // Backward compatibility for non-prefixed system properties
-        gooseConfig[key] = value;
+        systemProperties[key] = value;
       } else {
-        // User property - may contain pipe operations
+        // User property - may contain pipe operations or templates
         userProperties[key] = value;
       }
     }
     
-    // Second pass: Process user properties with pipe operations
-    for (const [key, value] of Object.entries(userProperties)) {
+    // Process system properties - they can now use templates and pipes
+    for (const [key, value] of Object.entries(systemProperties)) {
       try {
-        // Check if value is a string with pipe operations
-        if (typeof value === 'string' && value.includes('~>')) {
-          // Execute pipe chain with current context
-          context[key] = this.pipeOperations.executePipeChain(value, context);
-        } else {
-          // No pipes, use value as-is
-          context[key] = value;
+        let processedValue = value;
+        
+        // Check if value is a string with templates or pipe operations
+        if (typeof value === 'string') {
+          // First apply templates using current context
+          if (value.includes('{{')) {
+            processedValue = this.renderTemplate(value, context);
+          }
+          
+          // Then apply pipe operations if present
+          if (processedValue.includes('~>')) {
+            processedValue = this.pipeOperations.executePipeChain(processedValue, context);
+          }
         }
+        
+        // Add to goose config WITHOUT the _ prefix (stripped)
+        gooseConfig[key] = processedValue;
       } catch (error) {
-        throw new Error(`Error processing property "${key}" with pipes: ${error.message}`);
+        throw new Error(`Error processing system property "_${key}" with templates/pipes: ${error.message}`);
       }
     }
     
-    // Add goose config to context
+    // STEP 3: Add hidden context-level variables (based on filename being processed)
+    context.filename = path.basename(targetFile);
+    context.filepath = targetFile;
+    context.content = fs.readFileSync(targetFile, 'utf8');
+    context._geeseFileDir = fileDir; // Internal: For pipe operations that need file resolution
+    
+    // STEP 4: Process context-level (user) properties with pipe operations and templates
+    for (const [key, value] of Object.entries(userProperties)) {
+      try {
+        let processedValue = value;
+        
+        // Check if value is a string with templates or pipe operations
+        if (typeof value === 'string') {
+          // First apply templates using current context
+          if (value.includes('{{')) {
+            processedValue = this.renderTemplate(value, context);
+          }
+          
+          // Then apply pipe operations if present
+          if (processedValue.includes('~>')) {
+            processedValue = this.pipeOperations.executePipeChain(processedValue, context);
+          }
+        }
+        
+        context[key] = processedValue;
+      } catch (error) {
+        throw new Error(`Error processing property "${key}" with templates/pipes: ${error.message}`);
+      }
+    }
+    
+    // Add goose config to context (internal use)
     context._gooseConfig = gooseConfig;
     
     return context;
@@ -320,7 +369,7 @@ class GeeseParser {
     const validationSchema = schema || defaultSchema;
     
     const result = SchemaValidator.validate(frontmatter, validationSchema, {
-      allowPrefixVariants: true  // Support both $include and include
+      allowPrefixVariants: true  // Support _include, $include, @include, and include
     });
     
     if (!result.valid) {

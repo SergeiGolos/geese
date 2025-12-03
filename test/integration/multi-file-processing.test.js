@@ -195,9 +195,9 @@ Review this file: {{filename}}
     const parser = new GeeseParser();
     const data = parser.parseGeeseFile(geeseFile);
     
-    assertEquals(Array.isArray(data.frontmatter.$include), true, '$include should be array');
-    assertEquals(data.frontmatter.$include.length, 2, 'Should have 2 include patterns');
-    assertEquals(Array.isArray(data.frontmatter.$exclude), true, '$exclude should be array');
+    assertEquals(Array.isArray(data.frontmatter._include), true, '_include should be array');
+    assertEquals(data.frontmatter._include.length, 2, 'Should have 2 include patterns');
+    assertEquals(Array.isArray(data.frontmatter._exclude), true, '_exclude should be array');
   });
 
   // Test 8: Process multiple files in sequence

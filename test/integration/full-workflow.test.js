@@ -166,11 +166,11 @@ Content:
     
     const data = parser.parseGeeseFile(geeseFile);
     
-    if (!data.frontmatter || !data.frontmatter.$include) {
+    if (!data.frontmatter || !data.frontmatter._include) {
       throw new Error('Failed to parse frontmatter');
     }
     
-    assertEquals(Array.isArray(data.frontmatter.$include), true, '$include should be array');
+    assertEquals(Array.isArray(data.frontmatter._include), true, '_include should be array');
     assertContains(data.template, '{{filename}}', 'Template should contain variables');
   });
 

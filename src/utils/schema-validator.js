@@ -60,18 +60,31 @@ class SchemaValidator {
    * Get field value from data, checking both prefixed and non-prefixed versions
    * @param {Object} data - Data object
    * @param {string} field - Field name
-   * @param {boolean} allowPrefixVariants - Whether to check $ prefix variants
+   * @param {boolean} allowPrefixVariants - Whether to check _ and $ prefix variants
    * @returns {*} Field value or undefined
    */
   static getFieldValue(data, field, allowPrefixVariants = true) {
     if (allowPrefixVariants) {
-      // Check $ prefixed version first, then non-prefixed
-      const prefixedField = `$${field}`;
-      if (Object.prototype.hasOwnProperty.call(data, prefixedField)) {
-        return data[prefixedField];
+      // Check _ prefixed version first (current standard)
+      const underscoreField = `_${field}`;
+      if (Object.prototype.hasOwnProperty.call(data, underscoreField)) {
+        return data[underscoreField];
+      }
+      
+      // Check $ prefixed version (backward compatibility)
+      const dollarField = `$${field}`;
+      if (Object.prototype.hasOwnProperty.call(data, dollarField)) {
+        return data[dollarField];
+      }
+      
+      // Check @ prefixed version (legacy backward compatibility)
+      const atField = `@${field}`;
+      if (Object.prototype.hasOwnProperty.call(data, atField)) {
+        return data[atField];
       }
     }
     
+    // Check non-prefixed version
     if (Object.prototype.hasOwnProperty.call(data, field)) {
       return data[field];
     }
