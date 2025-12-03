@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
 const inquirer = require('inquirer').default || require('inquirer');
 const CLIArgumentParser = require('../../src/cli-argument-parser');
+const { createContainer } = require('../../src/container-setup');
 
 /**
  * Get human-readable file size
@@ -129,7 +130,6 @@ async function runCommand(container, directory, options) {
   let reportGenerator;
   if (options.output) {
     // Create a temporary container with custom log directory
-    const { createContainer } = require('../../src/container-setup');
     const tempContainer = createContainer({ logDir: options.output });
     reportGenerator = tempContainer.get('reportGenerator');
   } else {
