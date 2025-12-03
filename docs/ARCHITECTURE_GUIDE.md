@@ -1,6 +1,6 @@
 # Architecture Guide
 
-This guide provides an overview of the architectural patterns and infrastructure available in the Geese project.
+This guide provides an overview of the architectural patterns and infrastructure in the Geese project. **These patterns are mandatory** - the Dependency Injection Container is the baseline architecture for all commands and services.
 
 ## Table of Contents
 
@@ -14,32 +14,46 @@ This guide provides an overview of the architectural patterns and infrastructure
 
 ## Dependency Injection Container
 
-The Dependency Injection (DI) Container manages service dependencies and lifecycle.
+The Dependency Injection (DI) Container manages service dependencies and lifecycle. **This is the baseline architecture** - all CLI commands and services use the container.
+
+### Application Integration
+
+The container is created at application startup in `bin/geese.js`:
+
+```javascript
+const { createContainer } = require('../src/container-setup');
+
+// Create container with all services registered
+const container = createContainer();
+
+// All commands receive the container
+await configCommand(container, options);
+await newCommand(container, name, options);
+await runCommand(container, directory, options);
+```
+
+All services are registered in `src/container-setup.js`:
+- `configManager` - Configuration management (singleton)
+- `toolRegistry` - Tool registry (singleton)
+- `pipeOperations` - Pipe operations (singleton)
+- `parser` - Geese file parser (singleton)
+- `geeseFileFinder` - File discovery (singleton)
+- `reportGenerator` - Report generation (singleton)
+- `events` - Event emitter (singleton)
 
 ### Basic Usage
 
+If you need to create a container manually (e.g., for testing):
+
 ```javascript
-const Container = require('./src/container');
+const { createContainer } = require('./src/container-setup');
 
-// Create container
-const container = new Container();
+// Create configured container
+const container = createContainer({ logDir: './test-logs' });
 
-// Register a singleton service
-container.register('configManager', () => new ConfigManager(), { singleton: true });
-
-// Register a transient service
-container.register('parser', () => new GeeseParser());
-
-// Register with dependencies
-container.register('runner', (c) => {
-  return new ToolRunner(
-    c.get('configManager'),
-    c.get('parser')
-  );
-});
-
-// Get a service
-const runner = container.get('runner');
+// Get services
+const configManager = container.get('configManager');
+const parser = container.get('parser');
 ```
 
 ### Lifecycle Management

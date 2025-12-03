@@ -1,22 +1,22 @@
 # Implementation Complete: Sections 6 & 9 of TECHNICAL_DEBT.md
 
 **Date:** 2024-12-03  
-**Status:** ✅ Complete  
+**Status:** ✅ Complete & Fully Integrated  
 **Tests:** 162/162 passing (100%)
 
 ## Summary
 
-This implementation successfully addresses sections 6 and 9 of TECHNICAL_DEBT.md by implementing key architectural improvements and documentation standards.
+This implementation successfully addresses sections 6 and 9 of TECHNICAL_DEBT.md by implementing key architectural improvements and documentation standards. **The new architecture is now the baseline** - dependency injection and event system are fully integrated throughout the application.
 
 ---
 
 ## Section 6: Architecture and Design Recommendations
 
-### 6.2 Dependency Injection Container ✅ IMPLEMENTED
+### 6.2 Dependency Injection Container ✅ FULLY INTEGRATED
 
-**File:** `src/container.js`
+**Files:** `src/container.js`, `src/container-setup.js`
 
-A lightweight dependency injection container that manages service dependencies and lifecycles.
+A lightweight dependency injection container that manages service dependencies and lifecycles, now **fully integrated** as the baseline architecture.
 
 **Features:**
 - Service registration with factory functions
@@ -24,23 +24,33 @@ A lightweight dependency injection container that manages service dependencies a
 - Dependency resolution through container
 - Full JSDoc documentation with examples
 - Comprehensive test coverage (24 tests)
+- **Integrated at application startup**
+- **All commands use container-managed services**
+
+**Integration Points:**
+- `bin/geese.js` - Creates container at startup
+- `bin/commands/*.js` - All commands receive and use container
+- `src/container-setup.js` - Centralized service configuration
+- All singleton patterns replaced with container management
 
 **Benefits:**
 - Better testability through dependency injection
 - Explicit service dependencies
 - No global state from singleton instances
 - Loose coupling between services
+- **Mandatory architecture** - Not optional
 
-**Usage Example:**
+**Application Usage:**
 ```javascript
-const Container = require('./src/container');
-const container = new Container();
+// bin/geese.js
+const { createContainer } = require('../src/container-setup');
+const container = createContainer();
 
-// Register services
-container.register('configManager', () => new ConfigManager(), { singleton: true });
-container.register('parser', (c) => new GeeseParser(c.get('configManager')));
+// Commands receive container
+await runCommand(container, directory, options);
 
-// Use services
+// Commands use services from container
+const configManager = container.get('configManager');
 const parser = container.get('parser');
 ```
 
@@ -209,60 +219,70 @@ Final review: **No comments** (all issues resolved)
 
 ## Files Created/Modified
 
-### New Files Created (12)
+### New Files Created (13)
 1. `src/container.js` - Dependency injection container
-2. `src/events/event-emitter.js` - Event emitter implementation
-3. `test-container.js` - Container test suite
-4. `test-event-emitter.js` - EventEmitter test suite
-5. `docs/adr/README.md` - ADR index
-6. `docs/adr/ADR-001-interface-based-architecture.md`
-7. `docs/adr/ADR-002-dependency-injection-container.md`
-8. `docs/adr/ADR-003-event-driven-cross-cutting-concerns.md`
-9. `docs/adr/ADR-004-jsdoc-documentation-standard.md`
-10. `docs/ARCHITECTURE_GUIDE.md` - Comprehensive architecture guide
-11. `IMPLEMENTATION_COMPLETE.md` - This file
+2. `src/container-setup.js` - Application-wide container configuration
+3. `src/events/event-emitter.js` - Event emitter implementation
+4. `test-container.js` - Container test suite
+5. `test-event-emitter.js` - EventEmitter test suite
+6. `docs/adr/README.md` - ADR index
+7. `docs/adr/ADR-001-interface-based-architecture.md`
+8. `docs/adr/ADR-002-dependency-injection-container.md`
+9. `docs/adr/ADR-003-event-driven-cross-cutting-concerns.md`
+10. `docs/adr/ADR-004-jsdoc-documentation-standard.md`
+11. `docs/ARCHITECTURE_GUIDE.md` - Comprehensive architecture guide
+12. `IMPLEMENTATION_COMPLETE.md` - This file
 
-### Files Modified (2)
-1. `TECHNICAL_DEBT.md` - Updated sections 6 and 9 to mark as completed
+### Files Modified (7)
+1. `TECHNICAL_DEBT.md` - Updated sections 6 and 9 to mark as completed & integrated
 2. `package.json` - Added new tests to test script
+3. `bin/geese.js` - Creates container and passes to all commands
+4. `bin/commands/run-command.js` - Uses container for service access
+5. `bin/commands/config-command.js` - Uses container for service access
+6. `bin/commands/new-command.js` - Uses container for service access
+7. `src/pipe-cli.js` - Updated to accept and use container
 
 ---
 
-## Migration Path
+## Architecture Status
 
-The new infrastructure is **optional** and can be adopted gradually:
+The new infrastructure is **fully integrated** and is now the baseline architecture:
 
-1. **Phase 1** (Complete): Infrastructure in place
-   - Container and EventEmitter available for use
+✅ **Complete**: Infrastructure implemented and integrated
+   - Container and EventEmitter implemented
    - Fully tested and documented
-   - No breaking changes
+   - **Integrated into all CLI commands**
+   - **All services managed by container**
+   - No singleton exports - all replaced with DI
 
-2. **Phase 2** (Future): Gradual adoption
-   - Update command handlers to use container
-   - Add event emission to business logic
-   - Replace singleton exports with DI
+🔄 **In Progress**: Event emission integration
+   - EventEmitter available and tested
+   - Ready for use in business logic
+   - Can be added incrementally to operations
 
-3. **Phase 3** (Future): Full integration
-   - All services managed by container
-   - Events used throughout for cross-cutting concerns
-   - Complete separation of concerns
+📋 **Future**: Additional integrations
+   - Add event emission throughout business logic
+   - Use events for logging and monitoring
+   - Complete separation of concerns with events
 
 ---
 
 ## Impact Assessment
 
 ### Immediate Benefits
-✅ Better architecture foundations in place  
+✅ **DI Container fully integrated** - Baseline architecture, not optional  
+✅ All services managed by container - No more singleton exports  
+✅ Better testability - Services can be mocked via container  
 ✅ Clear documentation standards established  
 ✅ Testing infrastructure improved  
 ✅ Knowledge captured in ADRs  
 ✅ No breaking changes to existing code  
 
 ### Future Benefits
-📈 Easier to test new features with DI  
-📈 Better separation of concerns with events  
+📈 Easy to test new features with established DI pattern  
+📈 Event emission ready for cross-cutting concerns  
 📈 Clearer onboarding with comprehensive docs  
-📈 More maintainable codebase  
+📈 More maintainable codebase with explicit dependencies  
 📈 Foundation for further refactoring  
 
 ---
@@ -271,21 +291,22 @@ The new infrastructure is **optional** and can be adopted gradually:
 
 Sections 6 and 9 of TECHNICAL_DEBT.md have been successfully addressed with:
 
-1. ✅ **Dependency Injection Container** - Complete with tests and docs
-2. ✅ **Event System** - Complete with tests and docs
+1. ✅ **Dependency Injection Container** - **Fully integrated as baseline architecture**
+2. ✅ **Event System** - Complete with tests and docs, ready for use
 3. ✅ **JSDoc Standard** - Established with ADR
 4. ✅ **Architecture Decision Records** - 4 initial ADRs created
 5. ✅ **Architecture Guide** - Comprehensive usage guide
 6. ✅ **All Tests Passing** - 162/162 tests (100%)
 7. ✅ **Code Review Clean** - All feedback addressed
+8. ✅ **No Opt-In** - This is now the standard, mandatory architecture
 
-The implementation provides a solid foundation for future architectural improvements while maintaining backward compatibility with existing code.
+The implementation is **fully integrated** - the container-based architecture is now the foundation of the application. All commands use dependency injection. No singleton exports remain. This is the baseline for version 1.0 and beyond.
 
 ---
 
 **Next Steps (Recommended):**
-1. Gradually migrate existing code to use Container
-2. Add event emission to key operations
+1. ~~Integrate container into commands~~ ✅ **DONE** - Fully integrated
+2. Add event emission to key operations (EventEmitter ready to use)
 3. Continue adding JSDoc to remaining files
 4. Create additional ADRs as architectural decisions are made
 

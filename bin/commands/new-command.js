@@ -3,28 +3,32 @@ const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
 const inquirer = require('inquirer').default || require('inquirer');
 const matter = require('gray-matter');
-const ToolRegistry = require('../../src/tool-registry');
-const ConfigManager = require('../../src/config-manager');
-const GeeseFileFinder = require('../../src/geese-file-finder');
 const Wizard = require('../../src/wizard');
 const { launchEditor } = require('../utils/editor-launcher');
 
 /**
  * New command handler
  * Creates a new .geese file with optional wizard for configuration
+ * 
+ * @param {Container} container - Service container
+ * @param {string} name - Name of the file to create
+ * @param {Object} options - Command options
  */
-async function newCommand(name, options) {
+async function newCommand(container, name, options) {
   const { tool, output } = options;
   
+  // Get services from container
+  const toolRegistry = container.get('toolRegistry');
+  const configManager = container.get('configManager');
+  const geeseFileFinder = container.get('geeseFileFinder');
+  
   // Validate tool
-  const toolRegistry = new ToolRegistry();
   if (!toolRegistry.has(tool)) {
     throw new Error(`Unknown tool: ${tool}. Available: ${toolRegistry.getToolNames().join(', ')}`);
   }
   
   // Get tool runner for defaults
   const runner = toolRegistry.getRunner(tool);
-  const configManager = new ConfigManager();
   const toolConfig = await configManager.getToolConfig(tool);
   
   // Get default frontmatter and merge with config
@@ -42,7 +46,6 @@ async function newCommand(name, options) {
   
   // Determine output directory - default to .geese/ directory
   const workingDir = process.cwd();
-  const geeseFileFinder = new GeeseFileFinder();
   const outputDir = output 
     ? path.resolve(workingDir, output)
     : geeseFileFinder.getDefaultOutputDir(workingDir);

@@ -5,6 +5,10 @@ const chalk = require('chalk').default || require('chalk');
 
 // Import our modules
 const PipeCLI = require('../src/pipe-cli');
+const { createContainer } = require('../src/container-setup');
+
+// Create global service container
+const container = createContainer();
 
 // Import command handlers
 const configCommand = require('./commands/config-command');
@@ -33,7 +37,7 @@ program
   .option('--edit', 'Open configuration file in editor')
   .action(async (options) => {
     try {
-      await configCommand(options);
+      await configCommand(container, options);
     } catch (error) {
       console.error(chalk.red('Error:'), error.message);
       process.exit(1);
@@ -50,7 +54,7 @@ program
   .option('--edit', 'Open the created file in editor')
   .action(async (name, options) => {
     try {
-      await newCommand(name, options);
+      await newCommand(container, name, options);
     } catch (error) {
       console.error(chalk.red('Error:'), error.message);
       process.exit(1);
@@ -68,7 +72,7 @@ const pipeCommand = program
   .action(async (action, name, options) => {
     try {
       if (action === 'list') {
-        await PipeCLI.listPipes(options.sources);
+        await PipeCLI.listPipes(container, options.sources);
       } else if (action === 'new' && name) {
         const pipeFile = await PipeCLI.createPipe(name, options);
         
@@ -104,7 +108,7 @@ const runCommandDefinition = program
   .option('--debug-config', 'Show configuration hierarchy debug information')
   .action(async (directory, options) => {
     try {
-      await runCommand(directory || '.', options);
+      await runCommand(container, directory || '.', options);
     } catch (error) {
       console.error(chalk.red('Error:'), error.message);
       process.exit(1);

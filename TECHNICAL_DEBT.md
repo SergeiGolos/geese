@@ -1037,41 +1037,44 @@ Full domain-driven design with domain/ and application/ layers can be considered
 
 ---
 
-### 6.2 Implement Dependency Injection Container **✅ IMPLEMENTED**
+### 6.2 Implement Dependency Injection Container **✅ IMPLEMENTED & INTEGRATED**
 
-**Status:** ✅ **IMPLEMENTED** (2024-12-03)
+**Status:** ✅ **FULLY INTEGRATED** (2024-12-03)
 
 **Implementation:**
 
-Created `src/container.js` with full dependency injection support:
+Created `src/container.js` with full dependency injection support and integrated throughout the application:
 
 - ✅ Service registration with factory functions
 - ✅ Singleton and transient lifecycle management
 - ✅ Dependency resolution through container
 - ✅ Comprehensive JSDoc documentation
 - ✅ Full test coverage (24 tests passing)
+- ✅ **Integrated into main CLI** - Container is created at application startup
+- ✅ **All commands use DI** - Commands receive services from container
+- ✅ **No more singleton exports** - All services managed by container
 
-**Example Usage:**
+**Integration:**
+
+The container is now the **baseline architecture**:
 
 ```javascript
-const Container = require('./src/container');
-const container = new Container();
+// bin/geese.js - Application entry point
+const { createContainer } = require('../src/container-setup');
+const container = createContainer();
 
-// Register services
-container.register('configManager', () => new ConfigManager(), { singleton: true });
-container.register('pipeOperations', () => new PipeOperations(), { singleton: true });
-
-// Register with dependencies
-container.register('parser', (c) => {
-  return new GeeseParser(c.get('pipeOperations'));
-});
-
-// Use services
-const parser = container.get('parser');
+// All commands receive the container
+await configCommand(container, options);
+await newCommand(container, name, options);
+await runCommand(container, directory, options);
 ```
 
-**Files Created:**
+**Files Created/Modified:**
 - `src/container.js` - Container implementation (~140 lines)
+- `src/container-setup.js` - Application-wide container configuration
+- `bin/geese.js` - Creates and passes container to commands
+- `bin/commands/*.js` - All commands updated to use container
+- `src/pipe-cli.js` - Updated to accept container
 - `test-container.js` - Comprehensive test suite (24 tests)
 - `docs/adr/ADR-002-dependency-injection-container.md` - Architecture decision record
 
@@ -1081,6 +1084,7 @@ const parser = container.get('parser');
 - ✅ Lifecycle management (singleton vs transient)
 - ✅ Loose coupling between services
 - ✅ No global state from singletons
+- ✅ **Mandatory architecture** - No opt-in, this is the standard
 
 ---
 

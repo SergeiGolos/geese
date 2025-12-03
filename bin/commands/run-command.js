@@ -2,11 +2,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
 const inquirer = require('inquirer').default || require('inquirer');
-const ConfigManager = require('../../src/config-manager');
-const ToolRegistry = require('../../src/tool-registry');
-const GeeseParser = require('../../src/geese-parser');
 const ReportGenerator = require('../../src/report-generator');
-const GeeseFileFinder = require('../../src/geese-file-finder');
 const CLIArgumentParser = require('../../src/cli-argument-parser');
 
 /**
@@ -111,8 +107,12 @@ async function processTargetFile(parser, toolRunner, reportGenerator, geeseData,
 /**
  * Run command handler
  * Processes .geese files and applies AI-powered transformations to target files
+ * 
+ * @param {Container} container - Service container
+ * @param {string} directory - Working directory
+ * @param {Object} options - Command options
  */
-async function runCommand(directory, options) {
+async function runCommand(container, directory, options) {
   console.log(chalk.blue('🦢 Geese - AI-powered file processing tool'));
   const workingDir = path.resolve(directory);
   console.log(chalk.gray(`Working directory: ${workingDir}`));
@@ -120,8 +120,18 @@ async function runCommand(directory, options) {
   // Parse CLI arguments into config overrides
   const cliConfig = CLIArgumentParser.parseToConfig(process.argv);
   
+  // Get services from container
+  const configManager = container.get('configManager');
+  const pipeOps = container.get('pipeOperations');
+  const parser = container.get('parser');
+  const toolRegistry = container.get('toolRegistry');
+  
+  // Update report generator with output directory if specified
+  const reportGenerator = options.output 
+    ? new ReportGenerator(options.output)
+    : container.get('reportGenerator');
+  
   // Load hierarchical configuration
-  const configManager = new ConfigManager();
   const hierarchicalConfig = await configManager.loadHierarchicalConfig(workingDir, {}, cliConfig);
   const config = hierarchicalConfig.config;
   
@@ -132,11 +142,6 @@ async function runCommand(directory, options) {
     console.log();
   }
   
-  // Initialize components
-  const PipeOperations = require('../../src/pipe-operations');
-  const pipeOps = new PipeOperations();
-  const parser = new GeeseParser(pipeOps);
-  
   // Initialize pipe operations with hierarchical loading
   await pipeOps.initializeHierarchy(workingDir);
   
@@ -145,11 +150,8 @@ async function runCommand(directory, options) {
   const pipesDir = path.join(homeDir, '.geese', 'pipes');
   parser.loadCustomPipes(pipesDir);
   
-  const reportGenerator = new ReportGenerator(options.output || './logs');
-  
   // Determine tool and get runner
   const tool = config.defaultTool || 'goose';
-  const toolRegistry = new ToolRegistry();
   const toolRunner = toolRegistry.getRunner(tool);
   
   // Apply config overrides
@@ -193,7 +195,7 @@ async function runCommand(directory, options) {
     console.log(chalk.blue(`📄 Processing file: ${path.basename(filePath)}`));
   } else {
     // Use hierarchical file discovery
-    const geeseFileFinder = new GeeseFileFinder();
+    const geeseFileFinder = container.get('geeseFileFinder');
     geeseFiles = await geeseFileFinder.discoverGeeseFiles(workingDir);
     
     // Fallback to old method if no files found with new method
