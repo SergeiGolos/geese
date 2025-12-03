@@ -63,6 +63,11 @@ function createContainer(options = {}) {
     return new ReportGenerator(options.logDir || './logs');
   }, { singleton: true });
   
+  // Register report generator factory for creating instances with custom log directories
+  container.register('reportGeneratorFactory', () => {
+    return (logDir) => new ReportGenerator(logDir);
+  }, { singleton: true });
+  
   return container;
 }
 
