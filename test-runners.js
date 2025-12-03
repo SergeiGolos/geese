@@ -183,6 +183,8 @@ async function runTests() {
   assert(template.includes('{{filename}}'), 'GooseProvider default template includes {{filename}}');
 
   const args = gooseProvider.buildArgs({ model: 'gpt-4', recipe: 'code-review', temperature: 0.7 });
+  assert(args[0] === 'session', 'GooseProvider.buildArgs() starts with "session" command');
+  assert(args[1] === 'start', 'GooseProvider.buildArgs() has "start" as second argument');
   assert(args.includes('--model'), 'GooseProvider.buildArgs() includes --model flag');
   assert(args.includes('gpt-4'), 'GooseProvider.buildArgs() includes model value');
   assert(args.includes('--recipe'), 'GooseProvider.buildArgs() includes --recipe flag');
