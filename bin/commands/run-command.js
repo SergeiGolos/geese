@@ -126,14 +126,9 @@ async function runCommand(container, directory, options) {
   const toolRegistry = container.get('toolRegistry');
   
   // Get or create report generator with custom output directory if specified
-  let reportGenerator;
-  if (options.output) {
-    // Use factory to create report generator with custom log directory
-    const reportGeneratorFactory = container.get('reportGeneratorFactory');
-    reportGenerator = reportGeneratorFactory(options.output);
-  } else {
-    reportGenerator = container.get('reportGenerator');
-  }
+  const reportGenerator = options.output 
+    ? container.get('reportGeneratorFactory')(options.output)
+    : container.get('reportGenerator');
   
   // Load hierarchical configuration
   const hierarchicalConfig = await configManager.loadHierarchicalConfig(workingDir, {}, cliConfig);

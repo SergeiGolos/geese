@@ -21,15 +21,30 @@ The Dependency Injection (DI) Container manages service dependencies and lifecyc
 The container is created at application startup in `bin/geese.js`:
 
 ```javascript
+// bin/geese.js - Main CLI entry point
 const { createContainer } = require('../src/container-setup');
 
 // Create container with all services registered
 const container = createContainer();
 
-// All commands receive the container
-await configCommand(container, options);
-await newCommand(container, name, options);
-await runCommand(container, directory, options);
+// All command handlers receive the container
+program
+  .command('config')
+  .action(async (options) => {
+    await configCommand(container, options);
+  });
+
+program
+  .command('new <name>')
+  .action(async (name, options) => {
+    await newCommand(container, name, options);
+  });
+
+program
+  .command('run [directory]')
+  .action(async (directory, options) => {
+    await runCommand(container, directory, options);
+  });
 ```
 
 All services are registered in `src/container-setup.js`:
