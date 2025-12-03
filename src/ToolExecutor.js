@@ -72,6 +72,7 @@ class ToolExecutor {
     const executablePath = this.customPath || this.provider.getDefaultPath();
     const args = this.provider.buildArgs(config);
     
+    // Pass prompt via stdin (using -i - flag)
     const result = await this.runner.execute(executablePath, args, prompt, {
       realTime: true,
       onStdout: (data) => {

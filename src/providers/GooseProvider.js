@@ -22,8 +22,8 @@ class GooseProvider extends IAIToolProvider {
    */
   getFrontmatterSchema() {
     return {
-      required: ['include', 'recipe'],
-      optional: ['exclude', 'model', 'temperature', 'max_tokens', 'config', 'profile', 'resume', 'log_level', 'no_color', 'flags']
+      required: ['include'],
+      optional: ['exclude', 'model', 'provider', 'resume', 'interactive', 'no_session', 'flags']
     };
   }
 
@@ -34,10 +34,7 @@ class GooseProvider extends IAIToolProvider {
   getDefaultFrontmatter() {
     return {
       include: ['src/**/*.js'],
-      exclude: ['node_modules/**', '*.test.js'],
-      recipe: 'code-review',
-      temperature: 0.7,
-      max_tokens: 2000
+      exclude: ['node_modules/**', '*.test.js']
     };
   }
 
@@ -68,17 +65,15 @@ Please provide:
   buildArgs(config) {
     const args = [];
     
-    // Add the session start command first (required by goose CLI)
-    args.push('session', 'start');
+    // Add the run command first (required by goose CLI)
+    args.push('run');
     
-    // Add config file if specified
-    if (config.config) {
-      args.push('--config', config.config);
-    }
+    // Use stdin for instructions
+    args.push('-i', '-');
     
-    // Add profile if specified
-    if (config.profile) {
-      args.push('--profile', config.profile);
+    // Add provider if specified
+    if (config.provider) {
+      args.push('--provider', config.provider);
     }
     
     // Add model if specified
@@ -86,34 +81,19 @@ Please provide:
       args.push('--model', config.model);
     }
     
-    // Add recipe if specified  
-    if (config.recipe) {
-      args.push('--recipe', config.recipe);
-    }
-    
-    // Add temperature if specified
-    if (config.temperature !== undefined) {
-      args.push('--temperature', String(config.temperature));
-    }
-    
-    // Add max_tokens if specified
-    if (config.max_tokens !== undefined) {
-      args.push('--max-tokens', String(config.max_tokens));
-    }
-    
-    // Add resume session if specified
+    // Add resume flag if specified
     if (config.resume) {
-      args.push('--resume', config.resume);
+      args.push('--resume');
     }
     
-    // Add log level if specified
-    if (config.log_level) {
-      args.push('--log-level', config.log_level);
+    // Add interactive flag if specified
+    if (config.interactive) {
+      args.push('--interactive');
     }
     
-    // Add no-color flag if specified
-    if (config.no_color === true) {
-      args.push('--no-color');
+    // Add no-session flag if specified
+    if (config.no_session) {
+      args.push('--no-session');
     }
     
     // Add any additional flags from config
