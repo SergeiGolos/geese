@@ -10,11 +10,9 @@ const fs = require('fs-extra');
 class UIManager {
   constructor() {
     this.screen = null;
-    this.grid = null;
+    this.scrollableContainer = null;
     this.propertyBox = null;
-    this.fileTable = null;
-    this.outputBox = null;
-    this.statusBox = null;
+    this.fileTableBox = null;
     this.fileRows = [];
     this.sessions = [];
     this.startTime = null;
@@ -26,21 +24,43 @@ class UIManager {
   initialize() {
     this.startTime = Date.now();
     
-    // Create screen
+    // Create screen with scrolling support
     this.screen = blessed.screen({
       smartCSR: true,
-      title: '🦢 Geese - AI-Powered File Processing'
+      title: '🦢 Geese - AI-Powered File Processing',
+      fullUnicode: true
     });
 
-    // Create grid layout
-    this.grid = new contrib.grid({
-      rows: 12,
-      cols: 12,
-      screen: this.screen
+    // Create a scrollable box that contains all content
+    this.scrollableContainer = blessed.box({
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      scrollable: true,
+      alwaysScroll: true,
+      keys: true,
+      vi: true,
+      mouse: true,
+      scrollbar: {
+        ch: ' ',
+        track: {
+          bg: 'gray'
+        },
+        style: {
+          inverse: true
+        }
+      }
     });
 
-    // Property box at the top (2 rows)
-    this.propertyBox = this.grid.set(0, 0, 2, 12, blessed.box, {
+    this.screen.append(this.scrollableContainer);
+
+    // Property box at the top
+    this.propertyBox = blessed.box({
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: 'shrink',
       label: ' System Parameters ',
       tags: true,
       border: {
@@ -55,70 +75,44 @@ class UIManager {
           bold: true
         }
       },
-      scrollable: true,
-      alwaysScroll: true,
-      scrollbar: {
-        ch: ' ',
-        track: {
-          bg: 'gray'
-        },
-        style: {
-          inverse: true
-        }
+      padding: {
+        left: 1,
+        right: 1
       }
     });
 
-    // File processing table (5 rows)
-    this.fileTable = this.grid.set(2, 0, 5, 12, contrib.table, {
-      keys: true,
-      fg: 'white',
-      selectedFg: 'white',
-      selectedBg: 'blue',
-      interactive: false,
+    this.scrollableContainer.append(this.propertyBox);
+
+    // File processing table
+    this.fileTableBox = blessed.box({
+      top: 'shrink',
+      left: 0,
+      width: '100%',
+      height: 'shrink',
       label: ' File Processing Progress ',
+      tags: true,
       border: {
         type: 'line',
         fg: 'cyan'
       },
-      columnSpacing: 2,
-      columnWidth: [30, 10, 20, 12, 8]
-    });
-
-    // Output box (5 rows, 2/5 of remaining screen)
-    this.outputBox = this.grid.set(7, 0, 5, 12, blessed.log, {
-      label: ' Command Output ',
-      tags: true,
-      border: {
-        type: 'line'
-      },
-      style: {
-        border: {
-          fg: 'yellow'
-        },
-        label: {
-          fg: 'yellow',
-          bold: true
-        }
-      },
-      scrollable: true,
-      alwaysScroll: true,
-      mouse: true,
-      keys: true,
-      scrollbar: {
-        ch: ' ',
-        track: {
-          bg: 'gray'
-        },
-        style: {
-          inverse: true
-        }
+      padding: {
+        left: 1,
+        right: 1
       }
     });
+
+    this.scrollableContainer.append(this.fileTableBox);
+
+    // Don't create output box - we're removing console output from UI
+    this.outputBox = null;
 
     // Quit on Escape, q, or Control-C
     this.screen.key(['escape', 'q', 'C-c'], () => {
       return process.exit(0);
     });
+
+    // Focus on the scrollable container so scrolling works
+    this.scrollableContainer.focus();
 
     // Initial render
     this.screen.render();
@@ -203,12 +197,32 @@ class UIManager {
    * Update the file table display
    */
   updateTable() {
-    if (!this.fileTable) return;
+    if (!this.fileTableBox) return;
 
-    this.fileTable.setData({
-      headers: ['File Name', 'Size', 'Updated Time', 'Tokens', 'Status'],
-      data: this.fileRows
-    });
+    // Build table content manually
+    let tableContent = '';
+    
+    // Header
+    tableContent += '{bold}';
+    tableContent += 'File Name'.padEnd(32) + 
+                   'Size'.padEnd(12) + 
+                   'Updated Time'.padEnd(22) + 
+                   'Tokens'.padEnd(12) + 
+                   'Status\n';
+    tableContent += '{/bold}';
+    tableContent += '─'.repeat(90) + '\n';
+    
+    // Data rows
+    for (const row of this.fileRows) {
+      const [name, size, time, tokens, status] = row;
+      tableContent += name.padEnd(32) + 
+                     size.padEnd(12) + 
+                     time.padEnd(22) + 
+                     tokens.padEnd(12) + 
+                     status + '\n';
+    }
+    
+    this.fileTableBox.setContent(tableContent);
     this.screen.render();
   }
 
@@ -218,57 +232,29 @@ class UIManager {
    * @param {string} type - Message type (info, success, error, warning)
    */
   logOutput(message, type = 'info') {
-    if (!this.outputBox) return;
-
-    let formattedMessage = message;
-    switch (type) {
-      case 'success':
-        formattedMessage = `{green-fg}✓{/green-fg} ${message}`;
-        break;
-      case 'error':
-        formattedMessage = `{red-fg}✗{/red-fg} ${message}`;
-        break;
-      case 'warning':
-        formattedMessage = `{yellow-fg}⚠{/yellow-fg} ${message}`;
-        break;
-      case 'info':
-      default:
-        formattedMessage = `{blue-fg}ℹ{/blue-fg} ${message}`;
-        break;
-    }
-
-    this.outputBox.log(formattedMessage);
-    this.screen.render();
+    // No longer display console output in UI - only in report
+    // This method is kept for compatibility but does nothing
   }
 
   /**
    * Clear the output box
    */
   clearOutput() {
-    if (this.outputBox) {
-      this.outputBox.setContent('');
-      this.screen.render();
-    }
+    // No-op - output box no longer exists
   }
 
   /**
    * Show the output box
    */
   showOutput() {
-    if (this.outputBox) {
-      this.outputBox.show();
-      this.screen.render();
-    }
+    // No-op - output box no longer exists
   }
 
   /**
    * Hide the output box
    */
   hideOutput() {
-    if (this.outputBox) {
-      this.outputBox.hide();
-      this.screen.render();
-    }
+    // No-op - output box no longer exists
   }
 
   /**
@@ -283,7 +269,7 @@ class UIManager {
    * Show summary report card
    */
   showSummary() {
-    if (!this.screen) return;
+    if (!this.screen || !this.scrollableContainer) return;
 
     // Calculate statistics
     const totalFiles = this.sessions.length;
@@ -293,18 +279,12 @@ class UIManager {
     const avgTokens = totalFiles > 0 ? Math.round(totalTokens / totalFiles) : 0;
     const successCount = this.sessions.filter(s => s.success).length;
 
-    // Clear screen
-    this.screen.destroy();
-    this.screen = blessed.screen({
-      smartCSR: true
-    });
-
-    // Create summary box
+    // Create summary box and append to scrollable container
     const summaryBox = blessed.box({
-      top: 'center',
-      left: 'center',
-      width: '80%',
-      height: '60%',
+      top: 'shrink',
+      left: 0,
+      width: '100%',
+      height: 'shrink',
       tags: true,
       border: {
         type: 'line'
@@ -312,31 +292,32 @@ class UIManager {
       style: {
         border: {
           fg: 'green'
+        },
+        label: {
+          fg: 'green',
+          bold: true
         }
+      },
+      label: ' Processing Complete ',
+      padding: {
+        left: 1,
+        right: 1
       },
       content: this.generateSummaryContent(totalFiles, successCount, totalTime, avgTime, totalTokens, avgTokens)
     });
 
-    this.screen.append(summaryBox);
-
-    // Add exit instructions
-    const exitBox = blessed.box({
-      bottom: 0,
-      left: 'center',
-      width: 'shrink',
-      height: 1,
-      tags: true,
-      content: '{gray-fg}Press any key to exit{/gray-fg}'
-    });
-
-    this.screen.append(exitBox);
-
-    this.screen.key(['escape', 'q', 'C-c', 'enter', 'space'], () => {
+    this.scrollableContainer.append(summaryBox);
+    
+    // Scroll to the bottom to show the summary
+    this.scrollableContainer.setScrollPerc(100);
+    
+    this.screen.render();
+    
+    // Auto-exit after a brief delay to let user see the summary
+    setTimeout(() => {
       this.destroy();
       process.exit(0);
-    });
-
-    this.screen.render();
+    }, 3000);
   }
 
   /**
