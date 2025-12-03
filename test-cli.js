@@ -112,7 +112,7 @@ test('geese new handles .geese extension', () => {
   }
 });
 
-// Test 7: Parser handles @ prefix (converts to $ prefix for backward compatibility)
+// Test 7: Parser handles @ prefix (converts to _ prefix for backward compatibility)
 test('Parser handles @ prefix in frontmatter', () => {
   const testFile = '/tmp/geese-cli-test/at-prefix.geese';
   const content = `---
@@ -128,8 +128,8 @@ Test content`;
   const parser = new GeeseParser();
   const data = parser.parseGeeseFile(testFile);
   
-  // @ prefix should be converted to $ prefix
-  if (!data.frontmatter.$include || !data.frontmatter.$recipe) {
+  // @ prefix should be converted to _ prefix
+  if (!data.frontmatter._include || !data.frontmatter._recipe) {
     throw new Error('@ prefix not handled correctly');
   }
 });
@@ -367,8 +367,8 @@ test('Wizard getCurrentValue handles different prefixes', () => {
   }
 });
 
-// Test 22: Wizard cleanupLegacyPrefixes converts @ to $
-test('Wizard cleanupLegacyPrefixes converts @ to $', () => {
+// Test 22: Wizard cleanupLegacyPrefixes converts @ and $ to _
+test('Wizard cleanupLegacyPrefixes converts @ and $ to _', () => {
   const Wizard = require('./src/wizard');
   const ToolRegistry = require('./src/tool-registry');
   const toolRegistry = new ToolRegistry();
@@ -377,7 +377,7 @@ test('Wizard cleanupLegacyPrefixes converts @ to $', () => {
   
   const frontmatter = {
     '@include': ['test'],
-    '@recipe': 'test-recipe',
+    '$recipe': 'test-recipe',
     'other': 'value'
   };
   
@@ -386,11 +386,14 @@ test('Wizard cleanupLegacyPrefixes converts @ to $', () => {
   if (frontmatter['@include'] !== undefined) {
     throw new Error('@ prefix should be removed');
   }
-  if (frontmatter['$include'][0] !== 'test') {
-    throw new Error('$ prefix should be added');
+  if (frontmatter['$recipe'] !== undefined) {
+    throw new Error('$ prefix should be removed');
   }
-  if (frontmatter['$recipe'] !== 'test-recipe') {
-    throw new Error('@ to $ conversion failed for recipe');
+  if (frontmatter['_include'][0] !== 'test') {
+    throw new Error('_ prefix should be added');
+  }
+  if (frontmatter['_recipe'] !== 'test-recipe') {
+    throw new Error('@ to _ conversion failed for recipe');
   }
   if (frontmatter['other'] !== 'value') {
     throw new Error('Non-prefixed properties should remain unchanged');

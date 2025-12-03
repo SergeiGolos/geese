@@ -123,7 +123,7 @@ geese config --list
 **.geese File**:
 ```yaml
 ---
-$model: gpt-4-turbo
+_model: gpt-4-turbo
 ---
 ```
 
@@ -194,17 +194,17 @@ Result: `Author: John Doe`
 
 ```yaml
 ---
-# System properties use $ prefix for visual distinction
-$include:
+# System properties use _ prefix to identify them
+_include:
   - "src/**/*.js"
   - "*.md"
-$exclude:
+_exclude:
   - "node_modules/**"
   - "*.test.js"
-$recipe: "code-review"
-$model: "gpt-4"
-$temperature: 0.7
-$max_tokens: 2000
+_recipe: "code-review"
+_model: "gpt-4"
+_temperature: 0.7
+_max_tokens: 2000
 
 # User properties - can use pipe operations for data transformation
 project_name: "My Awesome Project"
@@ -225,26 +225,26 @@ Content:
 
 ### Frontmatter Properties
 
-#### System Properties ($ prefix)
-System properties control Geese behavior and are parsed once per file. They use the `$` prefix for visual distinction:
+#### System Properties (_ prefix)
+System properties control Geese behavior and are identified by the `_` prefix. When added to the context, the prefix is stripped:
 
 - **Required:**
-  - `$include`: Array of glob patterns for files to process
-  - `$recipe`: The Goose recipe to use
+  - `_include`: Array of glob patterns for files to process (supports templates and pipes)
+  - `_recipe`: The Goose recipe to use
 
 - **Optional:**
-  - `$exclude`: Array of glob patterns for files to exclude
-  - `$model`: AI model to use (e.g., "gpt-4", "claude-3")
-  - `$temperature`: AI response temperature (0-1)
-  - `$max_tokens`: Maximum tokens in response
-  - `$config`: Path to custom goose config file (e.g., "~/.goose/custom-config.yaml")
-  - `$profile`: Profile name from goose config (e.g., "work", "personal")
-  - `$resume`: Session ID to resume a previous goose session
-  - `$log_level`: Logging level for goose output ("debug", "info", "warning", "error")
-  - `$no_color`: Disable colored output (boolean, true/false)
-  - `$flags`: Array of additional CLI flags
+  - `_exclude`: Array of glob patterns for files to exclude (supports templates and pipes)
+  - `_model`: AI model to use (e.g., "gpt-4", "claude-3")
+  - `_temperature`: AI response temperature (0-1)
+  - `_max_tokens`: Maximum tokens in response
+  - `_config`: Path to custom goose config file (e.g., "~/.goose/custom-config.yaml")
+  - `_profile`: Profile name from goose config (e.g., "work", "personal")
+  - `_resume`: Session ID to resume a previous goose session
+  - `_log_level`: Logging level for goose output ("debug", "info", "warning", "error")
+  - `_no_color`: Disable colored output (boolean, true/false)
+  - `_flags`: Array of additional CLI flags
 
-**Note:** For backward compatibility, properties with `@` prefix (like `@include`) are automatically converted to `$` prefix.
+**Note:** System properties now support templates (using `{{variable}}`) and pipe operations (using `~>`). For backward compatibility, properties with `@` or `$` prefix are automatically converted to `_` prefix.
 
 #### User Properties (no prefix)
 User properties become available as template variables and support pipe operations for data transformation:
@@ -857,9 +857,9 @@ npm test
 
 ```yaml
 ---
-$include:
+_include:
   - "logs/**/*.log"
-$recipe: "analyze-logs"
+_recipe: "analyze-logs"
 error_lines: "./app.log" ~> readFile ~> grep "^ERROR"
 error_count: "./app.log" ~> readFile ~> grepCount "ERROR"
 warning_count: "./app.log" ~> readFile ~> grepCount "WARNING"
@@ -882,9 +882,9 @@ Please analyze these errors and suggest fixes.
 
 ```yaml
 ---
-$include:
+_include:
   - "data/**/*.json"
-$recipe: "process-json"
+_recipe: "process-json"
 user_names: "{{content}}" ~> parseJson ~> jqSelect users ~> jqMap name
 active_users: "{{content}}" ~> parseJson ~> jqSelect users ~> jqFilter status == active
 user_count: "{{content}}" ~> parseJson ~> jqSelect users ~> jqLength
@@ -907,9 +907,9 @@ Please analyze this user data and provide insights.
 
 ```yaml
 ---
-$include:
+_include:
   - "src/**/*"
-$recipe: "process-files"
+_recipe: "process-files"
 # Example using glob operations in template (if you have a list of files)
 js_files: '["src/app.js", "src/test.ts", "src/main.js"]' ~> parseJson ~> globFilter "*.js"
 non_test_files: '["app.test.js", "main.js", "util.spec.js"]' ~> parseJson ~> globFilter "*.test.js" exclude
@@ -928,14 +928,14 @@ File content:
 
 ```yaml
 ---
-include:
+_include:
   - "src/**/*.js"
   - "src/**/*.jsx"
-exclude:
+_exclude:
   - "*.test.js"
   - "node_modules/**"
-recipe: "code-review"
-@temperature: 0.3
+_recipe: "code-review"
+_temperature: 0.3
 review_type: "security and performance"
 ---
 
@@ -964,15 +964,15 @@ Please provide:
 
 ```yaml
 ---
-include:
+_include:
   - "src/**/*.js"
   - "src/**/*.ts"
-exclude:
+_exclude:
   - "*.test.js"
   - "dist/**"
-recipe: "documentation"
-@model: "gpt-4"
-@temperature: 0.1
+_recipe: "documentation"
+_model: "gpt-4"
+_temperature: 0.1
 project: "My Library"
 version: "2.1.0"
 ---

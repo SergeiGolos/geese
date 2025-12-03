@@ -6,7 +6,18 @@ const ObjectPathHelper = require('./utils/object-path-helper');
  */
 class CLIArgumentParser {
   /**
+   * Strip leading underscore from key if present
+   * @param {string} key - Key to process
+   * @returns {string} Key without leading underscore
+   */
+  static stripUnderscore(key) {
+    return key.startsWith('_') ? key.substring(1) : key;
+  }
+
+  /**
    * Parse CLI arguments into configuration object
+   * CLI arguments are always system-level variables.
+   * The _ prefix is stripped if present (e.g., --_cli becomes --cli)
    * @param {Array} args - Process arguments array
    * @returns {Object} Configuration object
    */
@@ -25,10 +36,13 @@ class CLIArgumentParser {
       let key = arg.substring(2);
       let value;
       
+      // Strip leading _ if present (CLI arguments are always system-level)
+      key = this.stripUnderscore(key);
+      
       // Check for --key=value format
       if (key.includes('=')) {
         const parts = key.split('=');
-        key = parts[0];
+        key = this.stripUnderscore(parts[0]);
         value = parts.slice(1).join('=');
       } else {
         // Check for --key value format

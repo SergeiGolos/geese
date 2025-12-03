@@ -49,20 +49,20 @@ class Wizard {
    * @returns {*} Current value or undefined
    */
   getCurrentValue(frontmatter, prop) {
-    return frontmatter[prop] || frontmatter[`$${prop}`] || frontmatter[`@${prop}`];
+    return frontmatter[prop] || frontmatter[`_${prop}`] || frontmatter[`$${prop}`] || frontmatter[`@${prop}`];
   }
 
   /**
-   * Clean up legacy @ prefixes and migrate to $ prefix
+   * Clean up legacy @ and $ prefixes and migrate to _ prefix
    * For backward compatibility with old .geese files
    * @param {Object} frontmatter - Frontmatter object to clean
    * @returns {Object} Cleaned frontmatter object
    */
   cleanupLegacyPrefixes(frontmatter) {
     for (const key of Object.keys(frontmatter)) {
-      if (key.startsWith('@')) {
-        const newKey = `$${key.slice(1)}`;
-        // Use existing $ value if present, otherwise use @ value
+      if (key.startsWith('@') || key.startsWith('$')) {
+        const newKey = `_${key.slice(1)}`;
+        // Use existing _ value if present, otherwise use @ or $ value
         frontmatter[newKey] = frontmatter[newKey] || frontmatter[key];
         delete frontmatter[key];
       }
@@ -89,7 +89,7 @@ class Wizard {
       for (const prop of required) {
         const currentValue = this.getCurrentValue(frontmatter, prop);
         const value = await this.promptForProperty(prop, currentValue);
-        frontmatter[`$${prop}`] = value;
+        frontmatter[`_${prop}`] = value;
         // Remove non-prefixed version if it exists
         if (frontmatter[prop] !== undefined) {
           delete frontmatter[prop];
@@ -117,7 +117,7 @@ class Wizard {
             choices: optional.map(prop => ({
               name: prop,
               value: prop,
-              checked: frontmatter[prop] !== undefined || frontmatter[`$${prop}`] !== undefined
+              checked: frontmatter[prop] !== undefined || frontmatter[`_${prop}`] !== undefined
             }))
           }
         ]);
@@ -126,7 +126,7 @@ class Wizard {
         for (const prop of selectedOptional) {
           const currentValue = this.getCurrentValue(frontmatter, prop);
           const value = await this.promptForProperty(prop, currentValue);
-          frontmatter[`$${prop}`] = value;
+          frontmatter[`_${prop}`] = value;
           // Remove non-prefixed version if it exists
           if (frontmatter[prop] !== undefined) {
             delete frontmatter[prop];
@@ -134,7 +134,7 @@ class Wizard {
         }
       }
 
-      // Clean up legacy @ prefixes for backward compatibility
+      // Clean up legacy @ and $ prefixes for backward compatibility
       this.cleanupLegacyPrefixes(frontmatter);
 
       console.log(chalk.green('\n✅ Configuration complete!'));

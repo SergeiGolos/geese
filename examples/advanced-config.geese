@@ -1,36 +1,36 @@
 ---
-# System properties use $ prefix
-$include:
+# System properties use _ prefix to identify them
+_include:
   - "src/**/*.js"
   - "src/**/*.ts"
-$exclude:
+_exclude:
   - "*.test.js"
   - "node_modules/**"
-$recipe: "code-review"
+_recipe: "code-review"
 
 # Basic parameters
-$model: "gpt-4"
-$temperature: 0.7
-$max_tokens: 2000
+_model: "gpt-4"
+_temperature: 0.7
+_max_tokens: 2000
 
 # Advanced goose CLI parameters (NEW)
 # Use custom config file for specific project settings
-$config: "~/.goose/work-config.yaml"
+_config: "~/.goose/work-config.yaml"
 
 # Use a specific profile from your goose config
-$profile: "work"
+_profile: "work"
 
 # Resume a previous session (useful for continuing work)
-# $resume: "session-abc123"
+# _resume: "session-abc123"
 
 # Set logging level for debugging
-$log_level: "info"
+_log_level: "info"
 
 # Disable colored output (useful for CI/CD)
-# $no_color: true
+# _no_color: true
 
 # Additional custom flags
-$flags:
+_flags:
   - "--verbose"
 
 # User properties

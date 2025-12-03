@@ -217,12 +217,12 @@ Test template`;
   const parser = new GeeseParser();
   const parsed = parser.parseGeeseFile(testFile);
   
-  // Check that $include was parsed correctly
-  if (!parsed.frontmatter.$include) {
-    throw new Error('$include not found in frontmatter');
+  // Check that $include was converted to _include (backward compatibility)
+  if (!parsed.frontmatter._include) {
+    throw new Error('$include not converted to _include');
   }
-  assertEquals(parsed.frontmatter.$include, ['*.js']);
-  assertEquals(parsed.frontmatter.$exclude, ['*.test.js']);
+  assertEquals(parsed.frontmatter._include, ['*.js']);
+  assertEquals(parsed.frontmatter._exclude, ['*.test.js']);
   assertEquals(parsed.frontmatter.user_prop, 'value');
   
   // Cleanup
@@ -248,11 +248,11 @@ Test template`;
   const parser = new GeeseParser();
   const parsed = parser.parseGeeseFile(testFile);
   
-  // Check that @include was converted to $include
-  if (!parsed.frontmatter.$include) {
-    throw new Error('@ prefix was not converted to $ prefix');
+  // Check that @include was converted to _include
+  if (!parsed.frontmatter._include) {
+    throw new Error('@ prefix was not converted to _ prefix');
   }
-  assertEquals(parsed.frontmatter.$include, ['*.js']);
+  assertEquals(parsed.frontmatter._include, ['*.js']);
   
   // Cleanup
   fs.removeSync(tempDir);
