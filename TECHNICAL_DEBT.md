@@ -10,11 +10,11 @@ This document identifies technical debt, deep coupling issues, and areas for ref
 
 ### Key Findings
 
-1. **Deep Coupling Issues**: 45+ identified instances of tight coupling between modules
-2. **Large Classes**: 4 classes exceed 300 lines with multiple responsibilities
-3. **God Object Patterns**: 2 modules acting as service locators
+1. **Deep Coupling Issues**: 6 major coupling patterns identified across core modules (detailed in Section 1)
+2. **Large Classes**: 4 classes exceed 300 lines with multiple responsibilities (bin/geese.js: 747 lines, pipe-operations.js: 577 lines, config-manager.js: 442 lines, wizard.js: 361 lines)
+3. **God Object Patterns**: 3 singleton exports creating global state (tool-registry, pipe-operations, geese-file-finder)
 4. **Interface Violations**: Limited use of interfaces despite abstract base classes
-5. **Code Duplication**: ~15% duplication rate across configuration and validation logic
+5. **Code Duplication**: Validation, configuration merging, and directory walking logic duplicated across 2-3 files each (detailed in Section 4)
 
 ---
 
@@ -288,7 +288,7 @@ The main CLI file contains:
 - Multiple commands mixed in one file
 - Each function has 50-200+ lines
 - Hard to test individual commands
-- High cyclomatic complexity (107 conditional branches)
+- High cyclomatic complexity (107 conditional statements including if/else/for/while/switch/ternary/logical operators counted by grep analysis)
 
 **Impact:** High - Maintenance nightmare, poor testability
 
@@ -1476,18 +1476,24 @@ Exported singleton instances...
 **Priority: Critical**
 
 1. **Add Test Infrastructure**
-   - Install Jest
-   - Create test directory structure
-   - Write tests for critical paths
+   - Install Jest and configure package.json
+   - Create test/ directory with unit/, integration/, fixtures/ subdirectories
+   - Write initial tests for ConfigManager, PipeOperations, GeeseParser
+   - Achieve 50% coverage of core modules
+   - **Acceptance:** Jest runs successfully, 50%+ coverage on core modules
 
 2. **Extract Utility Classes**
-   - ObjectPathHelper (shared by ConfigManager and CLIArgumentParser)
-   - DirectoryWalker (shared by multiple modules)
-   - FileSizeFormatter
+   - Create src/utils/object-path-helper.js with validatePath(), setNestedValue(), getNestedValue()
+   - Create src/utils/directory-walker.js with findAncestorDirectory(), findGeeseDirectory()
+   - Create src/utils/file-size-formatter.js with format(), getFileSize()
+   - Replace all duplicate implementations with utility calls
+   - **Acceptance:** No code duplication for these utilities, all tests pass
 
 3. **Remove Singleton Exports**
-   - Export classes instead of instances
-   - Update all imports
+   - Change module.exports from instances to classes in 3 files (tool-registry, pipe-operations, geese-file-finder)
+   - Update all import sites to instantiate classes
+   - Update tests to use dependency injection
+   - **Acceptance:** All singleton exports removed, existing functionality preserved, tests pass
 
 **Risk:** Medium - Breaks existing code but easy to fix
 
@@ -1497,13 +1503,20 @@ Exported singleton instances...
 **Priority: High**
 
 1. **Break Up bin/geese.js**
-   - Extract command handlers to separate files
-   - Create CommandContext/ServiceContainer
-   - Extract editor launcher, file selectors
+   - Create bin/commands/ directory
+   - Extract runCommand() to bin/commands/run-command.js
+   - Extract newCommand() to bin/commands/new-command.js
+   - Extract configCommand() to bin/commands/config-command.js
+   - Extract pipe commands to bin/commands/pipe-command.js
+   - Extract launchEditor() to bin/utils/editor-launcher.js
+   - Reduce bin/geese.js from 747 lines to <100 lines
+   - **Acceptance:** bin/geese.js < 100 lines, all commands in separate files, all functionality works
 
 2. **Create Command Pattern**
-   - Base Command class
-   - Implement for each command (run, new, config, pipe)
+   - Create BaseCommand class with execute() method signature
+   - Implement RunCommand, NewCommand, ConfigCommand, PipeCommand extending BaseCommand
+   - Each command handles its own validation and error handling
+   - **Acceptance:** All commands extend BaseCommand, consistent error handling, tests for each command
 
 **Risk:** Low - Well-isolated changes
 
@@ -1513,18 +1526,29 @@ Exported singleton instances...
 **Priority: High**
 
 1. **Refactor PipeOperations**
-   - Extract operation categories to separate files
-   - Create PipeRegistry, PipeLoader, PipeChainExecutor
-   - Implement IPipeOperation interface
+   - Create src/pipe-operations/ directory
+   - Extract StringOperations, FileOperations, ListOperations, TypeOperations, RegexOperations, UtilityOperations to separate files
+   - Create PipeRegistry class (registration, lookup) ~100 lines
+   - Create PipeLoader class (filesystem loading) ~100 lines
+   - Create PipeChainExecutor class (chain execution) ~100 lines
+   - Reduce main file from 577 to <150 lines
+   - **Acceptance:** pipe-operations/ directory exists, 6 operation category files, main class <150 lines, all pipe operations work, tests pass
 
 2. **Refactor ConfigManager**
-   - Extract ConfigFileIO, ConfigHierarchy, ConfigMerger
-   - Extract NestedObjectAccessor
+   - Create src/config/ directory
+   - Extract ConfigFileIO class (load/save to disk) ~80 lines
+   - Extract ConfigHierarchy class (hierarchical loading) ~120 lines
+   - Extract ConfigMerger class (deep merge logic) ~60 lines
+   - Use NestedObjectAccessor from Phase 1
+   - Reduce ConfigManager from 442 to <150 lines
+   - **Acceptance:** config/ directory exists, 3 extracted classes, ConfigManager <150 lines, all config operations work, tests pass
 
 3. **Refactor GeeseParser**
-   - Inject dependencies instead of global imports
-   - Extract template rendering
-   - Extract context preparation
+   - Inject PipeOperations instance via constructor
+   - Extract TemplateRenderer class (Handlebars operations)
+   - Extract ContextBuilder class (prepareContext logic)
+   - Remove direct require() of pipe-operations
+   - **Acceptance:** No global dependencies, injected dependencies, extracted classes, all parsing works, tests pass
 
 **Risk:** Medium-High - Core functionality, needs thorough testing
 
@@ -1534,18 +1558,25 @@ Exported singleton instances...
 **Priority: Medium**
 
 1. **Implement Dependency Injection**
-   - Create Container
-   - Wire up services
-   - Update entry points
+   - Create src/container.js with register() and get() methods
+   - Register all services (configManager, pipeOperations, parser, reportGenerator, toolRegistry)
+   - Update command handlers to use container
+   - Remove manual instantiation from commands
+   - **Acceptance:** Container class exists, all services registered, commands use container, tests with mocked container pass
 
 2. **Add Interface Definitions**
-   - Define IConfigProvider, IFileFinder, IReportGenerator
-   - Update implementations to extend interfaces
+   - Create src/interfaces/ directory
+   - Define IConfigProvider, IFileFinder, IReportGenerator, IPipeOperation base classes
+   - Document required methods with JSDoc and throws Error if not implemented
+   - Update existing implementations to extend interfaces
+   - **Acceptance:** 4 interface files exist, all implementations extend interfaces, interface documentation complete
 
 3. **Implement Event System**
-   - Create EventEmitter
-   - Add events for key operations
-   - Use for logging and progress
+   - Create src/events/event-emitter.js with on(), emit(), off() methods
+   - Add events: file:processing, file:processed, config:loaded, pipe:executed
+   - Update core operations to emit events
+   - Add event listeners in commands for logging and progress
+   - **Acceptance:** EventEmitter class exists, 4+ events defined, operations emit events, commands listen to events
 
 **Risk:** Low-Medium - Additive changes
 
@@ -1555,18 +1586,25 @@ Exported singleton instances...
 **Priority: Medium**
 
 1. **Centralize Security**
-   - Create InputValidator utility
-   - Add SecurityError class
-   - Update all validation to use centralized logic
+   - Create src/security/input-validator.js with validateObjectPath(), validateFilePath(), sanitizeInput()
+   - Create SecurityError class extending Error
+   - Replace all prototype pollution guards with InputValidator calls
+   - Add input sanitization to all user input paths
+   - **Acceptance:** InputValidator class exists, SecurityError defined, all validation uses centralized logic, security tests pass
 
 2. **Add Caching**
-   - Implement Cache utility
-   - Add to ConfigManager
-   - Add to file operations
+   - Create src/utils/cache.js with set(), get(), clear(), TTL support
+   - Add cache to ConfigManager.loadConfig()
+   - Add cache to GeeseParser.parseGeeseFile() for repeated files
+   - Measure performance improvement (expect 30-50% reduction in repeated operations)
+   - **Acceptance:** Cache class exists, ConfigManager and Parser use caching, performance metrics show improvement
 
 3. **Add Rate Limiting**
-   - Implement RateLimiter
-   - Apply to file operations
+   - Create src/utils/rate-limiter.js with acquire(), refill() methods
+   - Apply to file read operations in pipe-operations readFile
+   - Configure default limit of 100 operations/second
+   - Add tests to verify rate limiting works
+   - **Acceptance:** RateLimiter class exists, file operations rate-limited, tests verify limits enforced
 
 **Risk:** Low - Mostly additive
 
@@ -1706,11 +1744,6 @@ Following the phased roadmap will allow incremental improvement without disrupti
 4. **Setup Jest** (2 hours)
    - Enables testing
    - Foundation for everything else
-   - Zero risk
-
-5. **Create .gitignore for node_modules** (5 minutes)
-   - If not already there
-   - Best practice
    - Zero risk
 
 Total Time: ~9 hours
