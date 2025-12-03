@@ -1,6 +1,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
+const ObjectPathHelper = require('./utils/object-path-helper');
 
 class ConfigManager {
   constructor() {
@@ -63,26 +64,7 @@ class ConfigManager {
       return config;
     }
     
-    const keys = key.split('.');
-    
-    // Guard against prototype pollution
-    for (const k of keys) {
-      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
-        throw new Error(`Invalid configuration key: ${key}. Keys cannot contain '__proto__', 'constructor', or 'prototype'.`);
-      }
-    }
-    
-    let value = config;
-    
-    for (const k of keys) {
-      if (value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, k)) {
-        value = value[k];
-      } else {
-        return undefined;
-      }
-    }
-    
-    return value;
+    return ObjectPathHelper.getNestedValue(config, key);
   }
 
   /**
@@ -92,51 +74,7 @@ class ConfigManager {
    */
   async set(key, value) {
     const config = await this.loadConfig();
-    
-    const keys = key.split('.');
-    
-    // Guard against prototype pollution by validating all keys
-    // This prevents attacks using __proto__, constructor, or prototype
-    for (const k of keys) {
-      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
-        throw new Error(`Invalid configuration key: ${key}. Keys cannot contain '__proto__', 'constructor', or 'prototype'.`);
-      }
-    }
-    
-    // Build the nested structure safely
-    // Note: All keys have been validated above (lines 97-101), so traversal is safe
-    let current = config;
-    
-    for (let i = 0; i < keys.length - 1; i++) {
-      const k = keys[i];
-      
-      // Create nested object if needed, using Object.create(null) for safety
-      if (!Object.prototype.hasOwnProperty.call(current, k) || 
-          typeof current[k] !== 'object' || 
-          Array.isArray(current[k]) || 
-          current[k] === null) {
-        // Use Object.create(null) to create an object without prototype
-        const newObj = Object.create(null);
-        Object.defineProperty(current, k, {
-          value: newObj,
-          writable: true,
-          enumerable: true,
-          configurable: true
-        });
-      }
-      // Safe to traverse because all keys have been validated above
-      current = current[k];
-    }
-    
-    // Set the final value using Object.defineProperty
-    const finalKey = keys[keys.length - 1];
-    Object.defineProperty(current, finalKey, {
-      value: value,
-      writable: true,
-      enumerable: true,
-      configurable: true
-    });
-    
+    ObjectPathHelper.setNestedValue(config, key, value);
     await this.saveConfig(config);
   }
 
@@ -146,28 +84,7 @@ class ConfigManager {
    */
   async delete(key) {
     const config = await this.loadConfig();
-    
-    const keys = key.split('.');
-    
-    // Guard against prototype pollution
-    for (const k of keys) {
-      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
-        throw new Error(`Invalid configuration key: ${key}. Keys cannot contain '__proto__', 'constructor', or 'prototype'.`);
-      }
-    }
-    
-    let current = config;
-    
-    for (let i = 0; i < keys.length - 1; i++) {
-      const k = keys[i];
-      if (!Object.prototype.hasOwnProperty.call(current, k) || typeof current[k] !== 'object') {
-        return; // Key doesn't exist
-      }
-      current = current[k];
-    }
-    
-    delete current[keys[keys.length - 1]];
-    
+    ObjectPathHelper.deleteNestedValue(config, key);
     await this.saveConfig(config);
   }
 

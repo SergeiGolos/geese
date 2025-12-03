@@ -120,4 +120,5 @@ class GeeseFileFinder {
   }
 }
 
-module.exports = new GeeseFileFinder();
+// Export class instead of singleton instance
+module.exports = GeeseFileFinder;

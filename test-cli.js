@@ -278,7 +278,8 @@ test('geese new --wizard flag exists in help', () => {
 test('Wizard module can be instantiated', () => {
   const Wizard = require('./src/wizard');
   const ToolRegistry = require('./src/tool-registry');
-  const runner = ToolRegistry.getRunner('goose');
+  const toolRegistry = new ToolRegistry();
+  const runner = toolRegistry.getRunner('goose');
   
   const wizard = new Wizard(runner);
   if (!wizard) {
@@ -301,7 +302,8 @@ test('Wizard module can be instantiated', () => {
 test('Wizard getPropertyMetadata returns correct metadata', () => {
   const Wizard = require('./src/wizard');
   const ToolRegistry = require('./src/tool-registry');
-  const runner = ToolRegistry.getRunner('goose');
+  const toolRegistry = new ToolRegistry();
+  const runner = toolRegistry.getRunner('goose');
   const wizard = new Wizard(runner);
   
   // Test known properties
@@ -325,7 +327,8 @@ test('Wizard getPropertyMetadata returns correct metadata', () => {
 test('Wizard getPropertyMetadata returns fallback for unknown properties', () => {
   const Wizard = require('./src/wizard');
   const ToolRegistry = require('./src/tool-registry');
-  const runner = ToolRegistry.getRunner('goose');
+  const toolRegistry = new ToolRegistry();
+  const runner = toolRegistry.getRunner('goose');
   const wizard = new Wizard(runner);
   
   const unknownMeta = wizard.getPropertyMetadata('unknown_property');
@@ -338,7 +341,8 @@ test('Wizard getPropertyMetadata returns fallback for unknown properties', () =>
 test('Wizard getCurrentValue handles different prefixes', () => {
   const Wizard = require('./src/wizard');
   const ToolRegistry = require('./src/tool-registry');
-  const runner = ToolRegistry.getRunner('goose');
+  const toolRegistry = new ToolRegistry();
+  const runner = toolRegistry.getRunner('goose');
   const wizard = new Wizard(runner);
   
   // Test with $ prefix
@@ -367,7 +371,8 @@ test('Wizard getCurrentValue handles different prefixes', () => {
 test('Wizard cleanupLegacyPrefixes converts @ to $', () => {
   const Wizard = require('./src/wizard');
   const ToolRegistry = require('./src/tool-registry');
-  const runner = ToolRegistry.getRunner('goose');
+  const toolRegistry = new ToolRegistry();
+  const runner = toolRegistry.getRunner('goose');
   const wizard = new Wizard(runner);
   
   const frontmatter = {

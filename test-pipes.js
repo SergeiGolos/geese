@@ -8,8 +8,11 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs-extra');
 const chalk = require('chalk').default || require('chalk');
-const pipeOperations = require('./src/pipe-operations');
+const PipeOperations = require('./src/pipe-operations');
 const GeeseParser = require('./src/geese-parser');
+
+// Create instances
+const pipeOperations = new PipeOperations();
 
 // Get cross-platform temp directory
 const TEMP_DIR = os.tmpdir();

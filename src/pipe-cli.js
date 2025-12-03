@@ -84,7 +84,8 @@ class PipeCLI {
    * List all available pipe operations
    */
   static async listPipes(showSources = false) {
-    const pipeOps = require('./pipe-operations');
+    const PipeOperations = require('./pipe-operations');
+    const pipeOps = new PipeOperations();
     
     console.log(chalk.bold('\n📦 Available Pipe Operations\n'));
 

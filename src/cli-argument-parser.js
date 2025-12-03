@@ -1,3 +1,5 @@
+const ObjectPathHelper = require('./utils/object-path-helper');
+
 /**
  * Parse command-line arguments and convert them to configuration overrides
  * Supports both --key value and --key=value formats
@@ -41,56 +43,10 @@ class CLIArgumentParser {
       
       // Convert key to nested object structure
       // e.g., 'goose.model' becomes { goose: { model: value } }
-      this.setNestedValue(config, key, this.parseValue(value));
+      ObjectPathHelper.setNestedValue(config, key, this.parseValue(value));
     }
     
     return config;
-  }
-
-  /**
-   * Set nested value in object using dot notation
-   * @param {Object} obj - Object to modify
-   * @param {string} key - Key in dot notation
-   * @param {*} value - Value to set
-   */
-  static setNestedValue(obj, key, value) {
-    const keys = key.split('.');
-    
-    // Guard against prototype pollution
-    for (const k of keys) {
-      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
-        throw new Error(`Invalid configuration key: ${key}. Keys cannot contain '__proto__', 'constructor', or 'prototype'.`);
-      }
-    }
-    
-    let current = obj;
-    
-    for (let i = 0; i < keys.length - 1; i++) {
-      const k = keys[i];
-      
-      // Use Object.prototype.hasOwnProperty for safer checks
-      if (!Object.prototype.hasOwnProperty.call(current, k)) {
-        // Create a regular object (not prototype-less) for better compatibility
-        // Prototype pollution is prevented by key validation above
-        current[k] = {};
-      } else if (typeof current[k] !== 'object' || current[k] === null) {
-        // If intermediate value is not an object, replace it with an object
-        current[k] = {};
-      }
-      // Safe to traverse because all keys have been validated above
-      current = current[k];
-    }
-    
-    // Set the final value
-    // This is safe from prototype pollution because:
-    // 1. All keys (including finalKey) were validated above (lines 64-68)
-    // 2. We explicitly check for '__proto__', 'constructor', and 'prototype'
-    // 3. The validation throws an error if any dangerous key is found
-    const finalKey = keys[keys.length - 1];
-    
-    // lgtm[js/prototype-pollution-utility]
-    // Simple assignment is safe here due to validation above
-    current[finalKey] = value;
   }
 
   /**
