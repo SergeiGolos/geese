@@ -2,55 +2,54 @@ export const navigation = [
   {
     title: 'Introduction',
     links: [
-      { title: 'Getting started', href: '/' },
-      { title: 'Installation', href: '/docs/installation' },
+      { title: 'Getting Started', href: '/docs/tutorials/getting-started' },
+      { title: 'Creating Templates', href: '/docs/tutorials/creating-templates' },
     ],
   },
   {
-    title: 'Core concepts',
+    title: 'How-To Guides',
     links: [
-      { title: 'Understanding caching', href: '/docs/understanding-caching' },
-      {
-        title: 'Predicting user behavior',
-        href: '/docs/predicting-user-behavior',
-      },
-      { title: 'Basics of time-travel', href: '/docs/basics-of-time-travel' },
-      {
-        title: 'Introduction to string theory',
-        href: '/docs/introduction-to-string-theory',
-      },
-      { title: 'The butterfly effect', href: '/docs/the-butterfly-effect' },
+      { title: 'Manage Configuration', href: '/docs/how-to/manage-configuration' },
+      { title: 'Integrate AI Tools', href: '/docs/how-to/integrate-ai-tools' },
+      { title: 'Create Custom Pipes', href: '/docs/how-to/create-custom-pipes' },
+      { title: 'Troubleshoot', href: '/docs/how-to/troubleshoot' },
     ],
   },
   {
-    title: 'Advanced guides',
+    title: 'Reference',
     links: [
-      { title: 'Writing plugins', href: '/docs/writing-plugins' },
-      { title: 'Neuralink integration', href: '/docs/neuralink-integration' },
-      { title: 'Temporal paradoxes', href: '/docs/temporal-paradoxes' },
-      { title: 'Testing', href: '/docs/testing' },
-      { title: 'Compile-time caching', href: '/docs/compile-time-caching' },
-      {
-        title: 'Predictive data generation',
-        href: '/docs/predictive-data-generation',
-      },
+      { title: 'CLI Reference', href: '/docs/reference/cli' },
+      { title: 'File Format', href: '/docs/reference/file-format' },
+      { title: 'Config Settings', href: '/docs/reference/config-settings' },
+      { title: 'Pipes Library', href: '/docs/reference/pipes-library' },
+      { title: 'Pipe Operations', href: '/docs/reference/pipe-operations' },
     ],
   },
   {
-    title: 'API reference',
+    title: 'Explanation',
     links: [
-      { title: 'CacheAdvance.predict()', href: '/docs/cacheadvance-predict' },
-      { title: 'CacheAdvance.flush()', href: '/docs/cacheadvance-flush' },
-      { title: 'CacheAdvance.revert()', href: '/docs/cacheadvance-revert' },
-      { title: 'CacheAdvance.regret()', href: '/docs/cacheadvance-regret' },
+      { title: 'Core Concepts', href: '/docs/explanation/core-concepts' },
+      { title: 'Architecture', href: '/docs/explanation/architecture' },
+      { title: 'Security Model', href: '/docs/explanation/security-model' },
+      { title: 'Features Overview', href: '/docs/explanation/features-overview' },
+      { title: 'Configuration Inheritance', href: '/docs/explanation/configuration-inheritance' },
     ],
   },
   {
     title: 'Contributing',
     links: [
-      { title: 'How to contribute', href: '/docs/how-to-contribute' },
-      { title: 'Architecture guide', href: '/docs/architecture-guide' },
-      { title: 'Design principles', href: '/docs/design-principles' },
+      { title: 'Development Guide', href: '/docs/contributing/development' },
+      { title: 'Testing Guide', href: '/docs/contributing/testing' },
+    ],
+  },
+  {
+    title: 'Architecture Decisions',
+    links: [
+      { title: 'Overview', href: '/docs/architecture/adr' },
+      { title: 'ADR 001: Interface Based', href: '/docs/architecture/adr/001-interface-based-architecture' },
+      { title: 'ADR 002: DI Container', href: '/docs/architecture/adr/002-dependency-injection-container' },
+      { title: 'ADR 003: Event Driven', href: '/docs/architecture/adr/003-event-driven-cross-cutting-concerns' },
+      { title: 'ADR 004: JSDoc Standard', href: '/docs/architecture/adr/004-jsdoc-documentation-standard' },
     ],
   },
 ]
