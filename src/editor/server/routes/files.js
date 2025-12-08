@@ -1,6 +1,6 @@
 /**
  * @fileoverview API routes for file operations
- * Handles reading and listing .geese files and pipes
+ * Handles reading, writing, creating, and deleting .geese files and pipes
  */
 
 const express = require('express');
@@ -8,6 +8,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
+const matter = require('gray-matter');
 
 /**
  * Get list of all .geese files and pipes
@@ -172,6 +173,288 @@ async function findJsFiles(dir) {
     name: f,
     path: path.join(dir, f)
   }));
+}
+
+/**
+ * Save/update file contents
+ * PUT /api/files/:scope/:type/:filename
+ */
+router.put('/:scope/:type/:filename', async (req, res) => {
+  try {
+    const { scope, type, filename } = req.params;
+    const { content } = req.body;
+    
+    if (!content && content !== '') {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+
+    const projectDir = req.app.locals.projectDir;
+    
+    let baseDir;
+    if (scope === 'local') {
+      baseDir = path.join(projectDir, '.geese');
+    } else if (scope === 'global') {
+      baseDir = path.join(os.homedir(), '.geese');
+    } else if (scope === 'root') {
+      baseDir = projectDir;
+    } else {
+      return res.status(400).json({ error: 'Invalid scope' });
+    }
+
+    let filePath;
+    if (type === 'geese') {
+      filePath = path.join(baseDir, filename);
+    } else if (type === 'pipes') {
+      filePath = path.join(baseDir, 'pipes', filename);
+    } else if (type === 'config') {
+      filePath = path.join(baseDir, 'config.json');
+    } else {
+      return res.status(400).json({ error: 'Invalid type' });
+    }
+
+    // Validate content before saving
+    try {
+      if (type === 'geese') {
+        // Validate .geese file (YAML frontmatter + template)
+        matter(content);
+      } else if (type === 'config') {
+        // Validate JSON
+        JSON.parse(content);
+      } else if (type === 'pipes') {
+        // Basic JS syntax check (try to create a function)
+        new Function(content);
+      }
+    } catch (validationError) {
+      return res.status(400).json({ 
+        error: 'Validation failed', 
+        details: validationError.message 
+      });
+    }
+
+    // Ensure directory exists
+    await fs.ensureDir(path.dirname(filePath));
+
+    // Check if file exists first
+    if (!(await fs.pathExists(filePath))) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Security: Ensure path is within allowed directories
+    try {
+      const realPath = await fs.realpath(filePath);
+      const realBase = await fs.realpath(baseDir);
+      if (!realPath.startsWith(realBase)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    } catch (err) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Write file
+    await fs.writeFile(filePath, content, 'utf-8');
+
+    res.json({ 
+      success: true, 
+      message: 'File saved successfully',
+      path: filePath
+    });
+  } catch (error) {
+    console.error('Error saving file:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Create new file
+ * POST /api/files/:scope/:type
+ */
+router.post('/:scope/:type', async (req, res) => {
+  try {
+    const { scope, type } = req.params;
+    const { filename, content } = req.body;
+    
+    if (!filename) {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+
+    // Validate filename
+    if (filename.includes('/') || filename.includes('\\') || filename.includes('..')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+
+    const projectDir = req.app.locals.projectDir;
+    
+    let baseDir;
+    if (scope === 'local') {
+      baseDir = path.join(projectDir, '.geese');
+    } else if (scope === 'global') {
+      baseDir = path.join(os.homedir(), '.geese');
+    } else if (scope === 'root') {
+      baseDir = projectDir;
+    } else {
+      return res.status(400).json({ error: 'Invalid scope' });
+    }
+
+    let filePath;
+    if (type === 'geese') {
+      // Ensure .geese extension
+      const fileName = filename.endsWith('.geese') ? filename : `${filename}.geese`;
+      filePath = path.join(baseDir, fileName);
+    } else if (type === 'pipes') {
+      // Ensure .js extension
+      const fileName = filename.endsWith('.js') ? filename : `${filename}.js`;
+      filePath = path.join(baseDir, 'pipes', fileName);
+    } else if (type === 'config') {
+      filePath = path.join(baseDir, 'config.json');
+    } else {
+      return res.status(400).json({ error: 'Invalid type' });
+    }
+
+    // Check if file already exists
+    if (await fs.pathExists(filePath)) {
+      return res.status(409).json({ error: 'File already exists' });
+    }
+
+    // Validate content if provided
+    if (content) {
+      try {
+        if (type === 'geese') {
+          matter(content);
+        } else if (type === 'config') {
+          JSON.parse(content);
+        } else if (type === 'pipes') {
+          new Function(content);
+        }
+      } catch (validationError) {
+        return res.status(400).json({ 
+          error: 'Validation failed', 
+          details: validationError.message 
+        });
+      }
+    }
+
+    // Ensure directory exists
+    await fs.ensureDir(path.dirname(filePath));
+
+    // Create file with content or empty
+    await fs.writeFile(filePath, content || getDefaultContent(type), 'utf-8');
+
+    res.status(201).json({ 
+      success: true, 
+      message: 'File created successfully',
+      path: filePath,
+      filename: path.basename(filePath)
+    });
+  } catch (error) {
+    console.error('Error creating file:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Delete file
+ * DELETE /api/files/:scope/:type/:filename
+ */
+router.delete('/:scope/:type/:filename', async (req, res) => {
+  try {
+    const { scope, type, filename } = req.params;
+    const projectDir = req.app.locals.projectDir;
+    
+    let baseDir;
+    if (scope === 'local') {
+      baseDir = path.join(projectDir, '.geese');
+    } else if (scope === 'global') {
+      baseDir = path.join(os.homedir(), '.geese');
+    } else if (scope === 'root') {
+      baseDir = projectDir;
+    } else {
+      return res.status(400).json({ error: 'Invalid scope' });
+    }
+
+    let filePath;
+    if (type === 'geese') {
+      filePath = path.join(baseDir, filename);
+    } else if (type === 'pipes') {
+      filePath = path.join(baseDir, 'pipes', filename);
+    } else if (type === 'config') {
+      return res.status(403).json({ error: 'Cannot delete config file' });
+    } else {
+      return res.status(400).json({ error: 'Invalid type' });
+    }
+
+    // Check if file exists
+    if (!(await fs.pathExists(filePath))) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Security: Ensure path is within allowed directories
+    try {
+      const realPath = await fs.realpath(filePath);
+      const realBase = await fs.realpath(baseDir);
+      if (!realPath.startsWith(realBase)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    } catch (err) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Delete file
+    await fs.unlink(filePath);
+
+    res.json({ 
+      success: true, 
+      message: 'File deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Get default content for new files
+ */
+function getDefaultContent(type) {
+  if (type === 'geese') {
+    return `---
+_include:
+  - "**/*.js"
+_exclude:
+  - "node_modules/**"
+_recipe: "default"
+---
+
+# Your prompt template here
+Process the file: {{filename}}
+
+\`\`\`
+{{content}}
+\`\`\`
+`;
+  } else if (type === 'pipes') {
+    return `/**
+ * Custom pipe operation
+ */
+class CustomPipe {
+  constructor() {
+    this.name = 'customPipe';
+  }
+
+  execute(input, ...args) {
+    // Your pipe logic here
+    return input;
+  }
+}
+
+module.exports = CustomPipe;
+`;
+  } else if (type === 'config') {
+    return JSON.stringify({
+      defaultTool: "goose",
+      logLevel: "info"
+    }, null, 2);
+  }
+  return '';
 }
 
 module.exports = router;

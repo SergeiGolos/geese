@@ -2,7 +2,7 @@
 
 Web-based IDE for managing `.geese` files, pipes, and configuration.
 
-## Phase 1 Implementation (Current)
+## Phase 1 Implementation
 
 **Status**: ✅ Complete
 
@@ -13,6 +13,21 @@ Web-based IDE for managing `.geese` files, pipes, and configuration.
 - File viewing with syntax-aware display
 - Read-only editor (Monaco Editor with fallback to textarea)
 - Support for `.geese`, pipe `.js`, and `config.json` files
+
+## Phase 2 Implementation (Current)
+
+**Status**: ✅ Complete
+
+### Features
+
+- **File Editing**: Full Monaco Editor with syntax highlighting
+- **Save Functionality**: Save files with Ctrl+S or Save button
+- **File Creation**: Create new .geese files and pipes via "+ New" buttons
+- **File Deletion**: Delete files with confirmation dialog
+- **Real-time Validation**: YAML and JSON validation before saving
+- **Modified Indicator**: Visual indicator (●) for unsaved changes
+- **Status Messages**: Success/error feedback for all operations
+- **Context Menu**: Right-click files for quick actions
 
 ### Usage
 
@@ -48,6 +63,9 @@ src/editor/
 
 - `GET /api/files` - List all .geese files and pipes
 - `GET /api/files/:scope/:type/:filename` - Get file contents
+- `PUT /api/files/:scope/:type/:filename` - Save file contents (with validation)
+- `POST /api/files/:scope/:type` - Create new file
+- `DELETE /api/files/:scope/:type/:filename` - Delete file
   - scope: `local`, `global`, or `root`
   - type: `geese`, `pipes`, or `config`
 
@@ -59,11 +77,6 @@ src/editor/
 - Path traversal protection
 
 ## Future Phases
-
-### Phase 2: File Explorer + Editing
-- File creation, editing, and deletion
-- Save functionality
-- Real-time validation
 
 ### Phase 3: Configuration UI
 - Visual configuration editor
