@@ -35,13 +35,10 @@ Web-based IDE for managing `.geese` files, pipes, and configuration.
 
 ### Features
 
-- **Visual Configuration Editor**: Form-based settings management
-- **Scope Toggle**: Switch between Local (.geese/) and Global (~/.geese/) configurations
-- **Configuration Preview**: View merged configuration (global + local)
-- **Form Fields**: Dropdowns, text inputs, numbers, arrays, checkboxes for all settings
-- **Settings Categories**: General, Goose Settings, Security Settings
-- **Real-time Updates**: Changes reflected immediately
-- **Validation**: Configuration validation before saving
+- **Configuration File Editing**: Edit config.json files using the same Monaco Editor
+- **JSON Schema Validation**: Validate configuration structure before saving
+- **Syntax Highlighting**: JSON syntax highlighting for config files
+- **Same UX**: Consistent editing experience across all file types (geese, pipes, config)
 
 ### Usage
 
@@ -83,12 +80,6 @@ src/editor/
   - scope: `local`, `global`, or `root`
   - type: `geese`, `pipes`, or `config`
 
-- `GET /api/config/local` - Get local configuration
-- `GET /api/config/global` - Get global configuration
-- `GET /api/config/merged` - Get merged configuration (preview)
-- `PUT /api/config/local` - Update local configuration
-- `PUT /api/config/global` - Update global configuration
-
 ### Security
 
 - Server binds to localhost only (no external access)
@@ -97,6 +88,8 @@ src/editor/
 - Path traversal protection
 
 ## Future Phases
+
+### Phase 3: Configuration UI
 - Visual configuration editor
 - Local vs Global scope toggle
 - Form-based settings management

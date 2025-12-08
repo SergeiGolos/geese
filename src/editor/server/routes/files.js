@@ -240,8 +240,10 @@ router.put('/:scope/:type/:filename', async (req, res) => {
         // Validate .geese file (YAML frontmatter + template)
         matter(content);
       } else if (type === 'config') {
-        // Validate JSON
-        JSON.parse(content);
+        // Validate JSON syntax
+        const config = JSON.parse(content);
+        // Validate JSON schema
+        validateConfigSchema(config);
       } else if (type === 'pipes') {
         // Safe JS syntax check using esprima (no code execution)
         esprima.parseScript(content);
@@ -469,6 +471,78 @@ module.exports = CustomPipe;
     }, null, 2);
   }
   return '';
+}
+
+/**
+ * Validate configuration object against schema
+ */
+function validateConfigSchema(config) {
+  if (typeof config !== 'object' || config === null) {
+    throw new Error('Configuration must be a valid object');
+  }
+
+  // Validate specific fields if they exist
+  if (config.defaultTool !== undefined && typeof config.defaultTool !== 'string') {
+    throw new Error('defaultTool must be a string');
+  }
+
+  if (config.logLevel !== undefined) {
+    const validLevels = ['debug', 'info', 'warn', 'error'];
+    if (!validLevels.includes(config.logLevel)) {
+      throw new Error(`logLevel must be one of: ${validLevels.join(', ')}`);
+    }
+  }
+
+  if (config.goose !== undefined) {
+    if (typeof config.goose !== 'object') {
+      throw new Error('goose configuration must be an object');
+    }
+
+    if (config.goose.model !== undefined && typeof config.goose.model !== 'string') {
+      throw new Error('goose.model must be a string');
+    }
+
+    if (config.goose.temperature !== undefined) {
+      const temp = Number(config.goose.temperature);
+      if (isNaN(temp) || temp < 0 || temp > 1) {
+        throw new Error('goose.temperature must be a number between 0 and 1');
+      }
+    }
+
+    if (config.goose.max_tokens !== undefined) {
+      const tokens = Number(config.goose.max_tokens);
+      if (isNaN(tokens) || tokens < 1) {
+        throw new Error('goose.max_tokens must be a positive number');
+      }
+    }
+
+    if (config.goose.include !== undefined && !Array.isArray(config.goose.include)) {
+      throw new Error('goose.include must be an array');
+    }
+
+    if (config.goose.exclude !== undefined && !Array.isArray(config.goose.exclude)) {
+      throw new Error('goose.exclude must be an array');
+    }
+  }
+
+  if (config.security !== undefined) {
+    if (typeof config.security !== 'object') {
+      throw new Error('security configuration must be an object');
+    }
+
+    if (config.security.allowAbsolutePaths !== undefined && typeof config.security.allowAbsolutePaths !== 'boolean') {
+      throw new Error('security.allowAbsolutePaths must be a boolean');
+    }
+
+    if (config.security.maxFileReadsPerSecond !== undefined) {
+      const rate = Number(config.security.maxFileReadsPerSecond);
+      if (isNaN(rate) || rate < 1) {
+        throw new Error('security.maxFileReadsPerSecond must be a positive number');
+      }
+    }
+  }
+
+  return true;
 }
 
 module.exports = router;
