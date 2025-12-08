@@ -629,6 +629,7 @@ async function selectLog(index) {
     const data = await response.json();
     
     // Render markdown content as HTML
+    // Note: renderMarkdown() sanitizes input with escapeHtml() to prevent XSS
     logDetail.innerHTML = `<div class="markdown-content">${renderMarkdown(data.content)}</div>`;
   } catch (error) {
     console.error('Error loading log content:', error);

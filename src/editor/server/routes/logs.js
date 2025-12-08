@@ -51,10 +51,12 @@ router.get('/', async (req, res) => {
         
         for (const line of lines) {
           if (line.includes('**Total Sessions:**')) {
-            totalSessions = parseInt(line.match(/\d+/)[0]);
+            const match = line.match(/\d+/);
+            if (match) totalSessions = parseInt(match[0]);
           }
           if (line.includes('**Total Duration:**')) {
-            duration = parseInt(line.match(/\d+/)[0]);
+            const match = line.match(/\d+/);
+            if (match) duration = parseInt(match[0]);
           }
           if (line.includes('❌')) {
             status = '❌ Failed';
