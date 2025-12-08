@@ -307,7 +307,14 @@
         border-radius: 4px;
         padding: 20px;
         min-width: 400px;
-        max-width: 600px;
+        max-width: 700px;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+
+      .modal.large {
+        min-width: 700px;
+        max-width: 900px;
       }
 
       .modal h3 {
@@ -382,6 +389,75 @@
       .context-menu-item.danger:hover {
         background-color: #d9534f;
       }
+
+      /* Settings specific styles */
+      .settings-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #555;
+      }
+
+      .settings-tab {
+        padding: 8px 16px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        color: #888;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .settings-tab:hover {
+        color: #cccccc;
+      }
+
+      .settings-tab.active {
+        color: #007acc;
+        border-bottom-color: #007acc;
+      }
+
+      .settings-section {
+        display: none;
+      }
+
+      .settings-section.active {
+        display: block;
+      }
+
+      .array-input {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .array-item {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .array-item input {
+        flex: 1;
+      }
+
+      .form-help {
+        font-size: 11px;
+        color: #888;
+        margin-top: 4px;
+      }
+
+      .config-preview {
+        background-color: #1e1e1e;
+        border: 1px solid #555;
+        border-radius: 3px;
+        padding: 12px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre;
+        color: #d4d4d4;
+      }
     </style>
   </head>
   <body>
@@ -389,7 +465,9 @@
     <div id="root">
       <div class="header">
         <h1>🦢 Geese Editor</h1>
-        <span class="badge">Phase 2</span>
+        <span class="badge">Phase 3</span>
+        <div style="flex: 1;"></div>
+        <button class="btn btn-secondary btn-small" onclick="showSettingsModal()" style="margin: 0;">⚙️ Settings</button>
       </div>
       <div class="main-container">
         <div class="sidebar">

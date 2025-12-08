@@ -48,7 +48,9 @@ function createEditorServer(container, options = {}) {
 
   // API Routes
   const filesRouter = require('./routes/files');
+  const configRouter = require('./routes/config');
   app.use('/api/files', filesRouter);
+  app.use('/api/config', configRouter);
 
   // Serve static frontend
   const clientPublicPath = path.join(__dirname, '../client/public');
