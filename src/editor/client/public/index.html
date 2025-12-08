@@ -382,6 +382,158 @@
       .context-menu-item.danger:hover {
         background-color: #d9534f;
       }
+
+      /* Log Viewer Styles */
+      .logs-view {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+        background-color: #1e1e1e;
+      }
+
+      .logs-view.active {
+        display: flex;
+      }
+
+      .logs-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+      }
+
+      .log-item {
+        background-color: #2d2d30;
+        border: 1px solid #555;
+        border-radius: 4px;
+        padding: 12px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .log-item:hover {
+        background-color: #37373d;
+        border-color: #007acc;
+      }
+
+      .log-item.active {
+        background-color: #094771;
+        border-color: #007acc;
+      }
+
+      .log-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+
+      .log-item-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: #cccccc;
+      }
+
+      .log-item-status {
+        font-size: 11px;
+      }
+
+      .log-item-meta {
+        font-size: 11px;
+        color: #888;
+        display: flex;
+        gap: 12px;
+      }
+
+      .log-detail {
+        flex: 1;
+        overflow-y: auto;
+        background-color: #1e1e1e;
+        padding: 20px;
+      }
+
+      .log-detail .markdown-content {
+        color: #d4d4d4;
+        line-height: 1.6;
+      }
+
+      .log-detail h1, .log-detail h2, .log-detail h3 {
+        color: #cccccc;
+        margin-top: 16px;
+        margin-bottom: 8px;
+      }
+
+      .log-detail h1 {
+        font-size: 24px;
+        border-bottom: 1px solid #555;
+        padding-bottom: 8px;
+      }
+
+      .log-detail h2 {
+        font-size: 18px;
+      }
+
+      .log-detail h3 {
+        font-size: 14px;
+      }
+
+      .log-detail table {
+        border-collapse: collapse;
+        margin: 12px 0;
+        width: 100%;
+      }
+
+      .log-detail table th,
+      .log-detail table td {
+        border: 1px solid #555;
+        padding: 8px;
+        text-align: left;
+      }
+
+      .log-detail table th {
+        background-color: #2d2d30;
+        font-weight: 600;
+      }
+
+      .log-detail pre {
+        background-color: #2d2d30;
+        border: 1px solid #555;
+        border-radius: 4px;
+        padding: 12px;
+        overflow-x: auto;
+      }
+
+      .log-detail code {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: #ce9178;
+      }
+
+      .logs-split {
+        display: flex;
+        gap: 10px;
+        height: 100%;
+      }
+
+      .logs-sidebar {
+        width: 300px;
+        border-right: 1px solid #555;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .logs-sidebar-header {
+        padding: 12px;
+        background-color: #2d2d30;
+        border-bottom: 1px solid #555;
+        font-weight: 600;
+      }
+
+      .log-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: #888;
+      }
     </style>
   </head>
   <body>
@@ -389,7 +541,9 @@
     <div id="root">
       <div class="header">
         <h1>🦢 Geese Editor</h1>
-        <span class="badge">Phase 2</span>
+        <span class="badge">Phase 4</span>
+        <div style="flex: 1;"></div>
+        <button class="btn btn-secondary" onclick="toggleLogsView()" id="logs-toggle">📋 Logs</button>
       </div>
       <div class="main-container">
         <div class="sidebar">
@@ -418,6 +572,25 @@
             <div class="welcome-screen">
               <h2>Welcome to Geese Editor</h2>
               <p>Select a .geese file, pipe, or config file from the sidebar to get started.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Logs View -->
+        <div class="logs-view" id="logs-view">
+          <div class="logs-split">
+            <div class="logs-sidebar">
+              <div class="logs-sidebar-header">
+                Recent Runs
+              </div>
+              <div class="logs-list" id="logs-list">
+                <div style="padding: 20px; text-align: center; color: #888;">Loading logs...</div>
+              </div>
+            </div>
+            <div class="log-detail" id="log-detail">
+              <div class="log-empty">
+                <h2>No Log Selected</h2>
+                <p>Select a log from the sidebar to view its details</p>
+              </div>
             </div>
           </div>
         </div>

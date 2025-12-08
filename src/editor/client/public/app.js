@@ -507,6 +507,219 @@ window.addEventListener('beforeunload', (e) => {
   }
 });
 
+// ============================================
+// PHASE 4: LOG VIEWER
+// ============================================
+
+let currentView = 'editor'; // 'editor' or 'logs'
+let logs = [];
+let selectedLog = null;
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Toggle between editor and logs view
+ */
+async function toggleLogsView() {
+  const editorContainer = document.querySelector('.editor-container');
+  const logsView = document.getElementById('logs-view');
+  const logsToggleBtn = document.getElementById('logs-toggle');
+
+  if (currentView === 'editor') {
+    // Switch to logs view
+    editorContainer.style.display = 'none';
+    logsView.classList.add('active');
+    logsToggleBtn.textContent = '✏️ Editor';
+    currentView = 'logs';
+    await loadLogs();
+  } else {
+    // Switch to editor view
+    editorContainer.style.display = 'flex';
+    logsView.classList.remove('active');
+    logsToggleBtn.textContent = '📋 Logs';
+    currentView = 'editor';
+  }
+}
+
+/**
+ * Load logs from server
+ */
+async function loadLogs() {
+  const logsList = document.getElementById('logs-list');
+  
+  try {
+    const response = await fetch('/api/logs');
+    if (!response.ok) {
+      throw new Error('Failed to load logs');
+    }
+
+    logs = await response.json();
+
+    if (logs.length === 0) {
+      logsList.innerHTML = `
+        <div class="log-empty">
+          <p>No logs found</p>
+          <p style="font-size: 11px;">Run some .geese tasks to generate logs</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Render logs list
+    logsList.innerHTML = logs.map((log, index) => `
+      <div class="log-item" onclick="selectLog(${index})" id="log-item-${index}">
+        <div class="log-item-header">
+          <div class="log-item-title">${escapeHtml(log.taskName)}</div>
+          <div class="log-item-status">${log.status}</div>
+        </div>
+        <div class="log-item-meta">
+          <span>📅 ${formatTimestamp(log.timestamp)}</span>
+          <span>⏱️ ${log.duration}ms</span>
+          <span>📝 ${log.totalSessions} session(s)</span>
+        </div>
+      </div>
+    `).join('');
+
+    // Auto-select first log
+    if (logs.length > 0) {
+      selectLog(0);
+    }
+  } catch (error) {
+    console.error('Error loading logs:', error);
+    logsList.innerHTML = `
+      <div class="log-empty">
+        <p style="color: #f48771;">Error loading logs</p>
+        <p style="font-size: 11px;">${escapeHtml(error.message)}</p>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Select and display a log
+ */
+async function selectLog(index) {
+  const log = logs[index];
+  if (!log) return;
+
+  selectedLog = log;
+
+  // Update UI selection
+  document.querySelectorAll('.log-item').forEach((item, i) => {
+    item.classList.toggle('active', i === index);
+  });
+
+  // Load log content
+  const logDetail = document.getElementById('log-detail');
+  logDetail.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">Loading...</div>';
+
+  try {
+    const response = await fetch(`/api/logs/${encodeURIComponent(log.filename)}`);
+    if (!response.ok) {
+      throw new Error('Failed to load log content');
+    }
+
+    const data = await response.json();
+    
+    // Render markdown content as HTML
+    logDetail.innerHTML = `<div class="markdown-content">${renderMarkdown(data.content)}</div>`;
+  } catch (error) {
+    console.error('Error loading log content:', error);
+    logDetail.innerHTML = `
+      <div class="log-empty">
+        <p style="color: #f48771;">Error loading log</p>
+        <p style="font-size: 11px;">${escapeHtml(error.message)}</p>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Simple markdown to HTML renderer
+ */
+function renderMarkdown(markdown) {
+  let html = markdown;
+
+  // Code blocks first (preserve content)
+  const codeBlocks = [];
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+    const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+    codeBlocks.push(`<pre><code>${escapeHtml(code)}</code></pre>`);
+    return placeholder;
+  });
+
+  // Inline code
+  const inlineCodes = [];
+  html = html.replace(/`([^`]+)`/g, (match, code) => {
+    const placeholder = `__INLINE_CODE_${inlineCodes.length}__`;
+    inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
+    return placeholder;
+  });
+
+  // Escape remaining HTML
+  html = escapeHtml(html);
+
+  // Headers
+  html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+
+  // Bold
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+  // Tables
+  html = html.replace(/\|(.*?)\|\n\|([-:\| ]+)\|\n((?:\|.*?\|\n?)*)/g, (match, header, separator, rows) => {
+    const headerCells = header.split('|').filter(c => c.trim()).map(c => `<th>${c.trim()}</th>`).join('');
+    const rowCells = rows.trim().split('\n').map(row => {
+      const cells = row.split('|').filter(c => c.trim()).map(c => `<td>${c.trim()}</td>`).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+    return `<table><thead><tr>${headerCells}</tr></thead><tbody>${rowCells}</tbody></table>`;
+  });
+
+  // Restore code blocks
+  codeBlocks.forEach((code, i) => {
+    html = html.replace(`__CODE_BLOCK_${i}__`, code);
+  });
+
+  // Restore inline codes
+  inlineCodes.forEach((code, i) => {
+    html = html.replace(`__INLINE_CODE_${i}__`, code);
+  });
+
+  // Line breaks
+  html = html.replace(/\n\n/g, '<br><br>');
+  html = html.replace(/\n/g, '<br>');
+
+  return html;
+}
+
+/**
+ * Format timestamp for display
+ */
+function formatTimestamp(isoString) {
+  const date = new Date(isoString);
+  const now = new Date();
+  const diff = now - date;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
 // Initialize on page load
 window.addEventListener('DOMContentLoaded', () => {
   loadFiles();

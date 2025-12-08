@@ -29,7 +29,7 @@ Web-based IDE for managing `.geese` files, pipes, and configuration.
 - **Status Messages**: Success/error feedback for all operations
 - **Context Menu**: Right-click files for quick actions
 
-## Phase 3 Implementation (Current)
+## Phase 3 Implementation
 
 **Status**: ✅ Complete
 
@@ -39,6 +39,20 @@ Web-based IDE for managing `.geese` files, pipes, and configuration.
 - **JSON Schema Validation**: Validate configuration structure before saving
 - **Syntax Highlighting**: JSON syntax highlighting for config files
 - **Same UX**: Consistent editing experience across all file types (geese, pipes, config)
+
+## Phase 4 Implementation (Current)
+
+**Status**: ✅ Complete
+
+### Features
+
+- **Log Viewer**: View logs from recent Geese task runs
+- **Log List**: Display recent runs with metadata (task name, timestamp, status, duration, sessions)
+- **Log Detail View**: View full log content with markdown rendering
+- **Relative Timestamps**: Show timestamps as "6h ago", "12h ago", etc.
+- **Markdown Rendering**: Convert markdown logs to HTML with tables, code blocks, and formatting
+- **Toggle View**: Switch between Editor and Logs views with button in header
+- **Auto-selection**: Automatically select and display most recent log
 
 ### Usage
 
@@ -80,6 +94,9 @@ src/editor/
   - scope: `local`, `global`, or `root`
   - type: `geese`, `pipes`, or `config`
 
+- `GET /api/logs` - List all log files with metadata
+- `GET /api/logs/:filename` - Get log file content
+
 ### Security
 
 - Server binds to localhost only (no external access)
@@ -88,11 +105,6 @@ src/editor/
 - Path traversal protection
 
 ## Future Phases
-
-### Phase 4: Log Viewer
-- List recent runs
-- HTML-rendered log preview
-- Search and filter capabilities
 
 ### Phase 5: Pipe Library
 - Browse available pipes
