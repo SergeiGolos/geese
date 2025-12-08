@@ -474,6 +474,23 @@ module.exports = CustomPipe;
 }
 
 /**
+ * Helper: Validate numeric value is within range
+ */
+function validateNumericRange(value, min, max, fieldName) {
+  const num = Number(value);
+  if (isNaN(num)) {
+    throw new Error(`${fieldName} must be a number`);
+  }
+  if (min !== undefined && num < min) {
+    throw new Error(`${fieldName} must be at least ${min}`);
+  }
+  if (max !== undefined && num > max) {
+    throw new Error(`${fieldName} must be at most ${max}`);
+  }
+  return num;
+}
+
+/**
  * Validate configuration object against schema
  */
 function validateConfigSchema(config) {
@@ -503,17 +520,11 @@ function validateConfigSchema(config) {
     }
 
     if (config.goose.temperature !== undefined) {
-      const temp = Number(config.goose.temperature);
-      if (isNaN(temp) || temp < 0 || temp > 1) {
-        throw new Error('goose.temperature must be a number between 0 and 1');
-      }
+      validateNumericRange(config.goose.temperature, 0, 1, 'goose.temperature');
     }
 
     if (config.goose.max_tokens !== undefined) {
-      const tokens = Number(config.goose.max_tokens);
-      if (isNaN(tokens) || tokens < 1) {
-        throw new Error('goose.max_tokens must be a positive number');
-      }
+      validateNumericRange(config.goose.max_tokens, 1, undefined, 'goose.max_tokens');
     }
 
     if (config.goose.include !== undefined && !Array.isArray(config.goose.include)) {
@@ -535,10 +546,7 @@ function validateConfigSchema(config) {
     }
 
     if (config.security.maxFileReadsPerSecond !== undefined) {
-      const rate = Number(config.security.maxFileReadsPerSecond);
-      if (isNaN(rate) || rate < 1) {
-        throw new Error('security.maxFileReadsPerSecond must be a positive number');
-      }
+      validateNumericRange(config.security.maxFileReadsPerSecond, 1, undefined, 'security.maxFileReadsPerSecond');
     }
   }
 

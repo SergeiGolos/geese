@@ -89,11 +89,6 @@ src/editor/
 
 ## Future Phases
 
-### Phase 3: Configuration UI
-- Visual configuration editor
-- Local vs Global scope toggle
-- Form-based settings management
-
 ### Phase 4: Log Viewer
 - List recent runs
 - HTML-rendered log preview
