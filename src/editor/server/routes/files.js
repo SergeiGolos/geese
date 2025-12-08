@@ -9,6 +9,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 const matter = require('gray-matter');
+const esprima = require('esprima');
 
 /**
  * Get list of all .geese files and pipes
@@ -212,6 +213,27 @@ router.put('/:scope/:type/:filename', async (req, res) => {
       return res.status(400).json({ error: 'Invalid type' });
     }
 
+    // Ensure directory exists
+    await fs.ensureDir(path.dirname(filePath));
+
+    // Check if file exists first
+    if (!(await fs.pathExists(filePath))) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Security: Ensure path is within allowed directories (before validation)
+    try {
+      const realPath = await fs.realpath(filePath);
+      const realBase = await fs.realpath(baseDir);
+      // Use path.relative for cross-platform compatibility
+      const relativePath = path.relative(realBase, realPath);
+      if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    } catch (err) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     // Validate content before saving
     try {
       if (type === 'geese') {
@@ -221,33 +243,14 @@ router.put('/:scope/:type/:filename', async (req, res) => {
         // Validate JSON
         JSON.parse(content);
       } else if (type === 'pipes') {
-        // Basic JS syntax check (try to create a function)
-        new Function(content);
+        // Safe JS syntax check using esprima (no code execution)
+        esprima.parseScript(content);
       }
     } catch (validationError) {
       return res.status(400).json({ 
         error: 'Validation failed', 
         details: validationError.message 
       });
-    }
-
-    // Ensure directory exists
-    await fs.ensureDir(path.dirname(filePath));
-
-    // Check if file exists first
-    if (!(await fs.pathExists(filePath))) {
-      return res.status(404).json({ error: 'File not found' });
-    }
-
-    // Security: Ensure path is within allowed directories
-    try {
-      const realPath = await fs.realpath(filePath);
-      const realBase = await fs.realpath(baseDir);
-      if (!realPath.startsWith(realBase)) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-    } catch (err) {
-      return res.status(403).json({ error: 'Access denied' });
     }
 
     // Write file
@@ -323,7 +326,8 @@ router.post('/:scope/:type', async (req, res) => {
         } else if (type === 'config') {
           JSON.parse(content);
         } else if (type === 'pipes') {
-          new Function(content);
+          // Safe JS syntax check using esprima (no code execution)
+          esprima.parseScript(content);
         }
       } catch (validationError) {
         return res.status(400).json({ 
@@ -382,16 +386,26 @@ router.delete('/:scope/:type/:filename', async (req, res) => {
       return res.status(400).json({ error: 'Invalid type' });
     }
 
+    // Security: Validate path before checking existence (prevent info disclosure)
+    // First check if the path would be within allowed directories
+    const normalizedFilePath = path.normalize(filePath);
+    const normalizedBase = path.normalize(baseDir);
+    const relativePath = path.relative(normalizedBase, normalizedFilePath);
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     // Check if file exists
     if (!(await fs.pathExists(filePath))) {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    // Security: Ensure path is within allowed directories
+    // Security: Ensure real path is within allowed directories (handle symlinks)
     try {
       const realPath = await fs.realpath(filePath);
       const realBase = await fs.realpath(baseDir);
-      if (!realPath.startsWith(realBase)) {
+      const realRelativePath = path.relative(realBase, realPath);
+      if (realRelativePath.startsWith('..') || path.isAbsolute(realRelativePath)) {
         return res.status(403).json({ error: 'Access denied' });
       }
     } catch (err) {
