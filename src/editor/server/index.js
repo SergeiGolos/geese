@@ -7,6 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs-extra');
+const rateLimit = require('express-rate-limit');
 
 /**
  * Create and configure the editor server
@@ -27,6 +28,16 @@ function createEditorServer(container, options = {}) {
     credentials: true
   }));
   app.use(express.json());
+
+  // Rate limiting for API routes
+  const apiLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use('/api/', apiLimiter);
 
   // Security: Bind to localhost only
   const host = 'localhost';
