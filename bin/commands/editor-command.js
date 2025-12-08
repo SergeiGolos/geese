@@ -5,7 +5,6 @@
 
 const chalk = require('chalk').default || require('chalk');
 const { startEditorServer } = require('../../src/editor/server');
-const { exec } = require('child_process');
 const path = require('path');
 
 /**
@@ -15,19 +14,30 @@ const path = require('path');
 function openBrowser(url) {
   const platform = process.platform;
   let command;
+  let args;
 
-  if (platform === 'darwin') {
-    command = `open "${url}"`;
-  } else if (platform === 'win32') {
-    command = `start "${url}"`;
-  } else {
-    command = `xdg-open "${url}"`;
+  // Validate URL to prevent injection
+  if (!url.startsWith('http://localhost:') && !url.startsWith('http://127.0.0.1:')) {
+    console.log(chalk.yellow(`Invalid URL. Please open manually: ${url}`));
+    return;
   }
 
-  exec(command, (error) => {
-    if (error) {
-      console.log(chalk.yellow(`Could not open browser automatically. Please open: ${url}`));
-    }
+  if (platform === 'darwin') {
+    command = 'open';
+    args = [url];
+  } else if (platform === 'win32') {
+    command = 'cmd.exe';
+    args = ['/c', 'start', url];
+  } else {
+    command = 'xdg-open';
+    args = [url];
+  }
+
+  const { spawn } = require('child_process');
+  const proc = spawn(command, args, { detached: true, stdio: 'ignore' });
+  proc.unref();
+  proc.on('error', (error) => {
+    console.log(chalk.yellow(`Could not open browser automatically. Please open: ${url}`));
   });
 }
 

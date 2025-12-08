@@ -112,15 +112,20 @@ router.get('/:scope/:type/:filename', async (req, res) => {
       return res.status(400).json({ error: 'Invalid type. Must be "geese", "pipes", or "config"' });
     }
 
-    // Security: Ensure path is within allowed directories
-    const realPath = await fs.realpath(filePath);
-    const realBase = await fs.realpath(baseDir);
-    if (!realPath.startsWith(realBase)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
+    // Check if file exists first
     if (!(await fs.pathExists(filePath))) {
       return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Security: Ensure path is within allowed directories
+    try {
+      const realPath = await fs.realpath(filePath);
+      const realBase = await fs.realpath(baseDir);
+      if (!realPath.startsWith(realBase)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    } catch (err) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     const content = await fs.readFile(filePath, 'utf-8');
