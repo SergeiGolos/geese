@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Geese Editor - Web-based IDE for .geese files" />
+    <title>Geese Editor</title>
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.css" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        overflow: hidden;
+      }
+
+      #root {
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        background-color: #333;
+        padding: 10px 20px;
+        border-bottom: 1px solid #555;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .header h1 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #cccccc;
+        margin: 0;
+      }
+
+      .header .badge {
+        background-color: #007acc;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .main-container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        width: 250px;
+        background-color: #252526;
+        border-right: 1px solid #555;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+      }
+
+      .sidebar-section {
+        border-bottom: 1px solid #333;
+      }
+
+      .sidebar-section-header {
+        padding: 10px 15px;
+        background-color: #2d2d30;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #cccccc;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .sidebar-section-header:hover {
+        background-color: #333;
+      }
+
+      .file-list {
+        padding: 5px 0;
+      }
+
+      .file-item {
+        padding: 6px 15px 6px 30px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #cccccc;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .file-item:hover {
+        background-color: #2a2d2e;
+      }
+
+      .file-item.active {
+        background-color: #094771;
+      }
+
+      .file-item.geese::before {
+        content: "📄 ";
+        margin-right: 5px;
+      }
+
+      .file-item.pipe::before {
+        content: "⚙️ ";
+        margin-right: 5px;
+      }
+
+      .file-item.config::before {
+        content: "🔧 ";
+        margin-right: 5px;
+      }
+
+      .editor-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background-color: #1e1e1e;
+      }
+
+      .editor-tabs {
+        display: flex;
+        background-color: #2d2d30;
+        border-bottom: 1px solid #555;
+        min-height: 35px;
+        align-items: center;
+      }
+
+      .editor-tab {
+        padding: 8px 20px 8px 15px;
+        background-color: #2d2d30;
+        border-right: 1px solid #555;
+        cursor: pointer;
+        font-size: 13px;
+        color: #cccccc;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .editor-tab:hover {
+        background-color: #1e1e1e;
+      }
+
+      .editor-tab.active {
+        background-color: #1e1e1e;
+        color: white;
+      }
+
+      .editor-content {
+        flex: 1;
+        position: relative;
+      }
+
+      .welcome-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 40px;
+        text-align: center;
+      }
+
+      .welcome-screen h2 {
+        font-size: 24px;
+        color: #cccccc;
+        margin-bottom: 20px;
+      }
+
+      .welcome-screen p {
+        font-size: 14px;
+        color: #888;
+        max-width: 500px;
+        line-height: 1.6;
+      }
+
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        font-size: 14px;
+        color: #888;
+      }
+
+      .error {
+        padding: 20px;
+        color: #f48771;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root">
+      <div class="header">
+        <h1>🦢 Geese Editor</h1>
+        <span class="badge">Phase 1</span>
+      </div>
+      <div class="main-container">
+        <div class="sidebar">
+          <div class="sidebar-section">
+            <div class="sidebar-section-header">▼ LOCAL (.geese/)</div>
+            <div class="file-list" id="local-files">
+              <div style="padding: 10px 15px; font-size: 12px; color: #888; font-style: italic;">Loading...</div>
+            </div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-header">▼ GLOBAL (~/.geese/)</div>
+            <div class="file-list" id="global-files">
+              <div style="padding: 10px 15px; font-size: 12px; color: #888; font-style: italic;">Loading...</div>
+            </div>
+          </div>
+        </div>
+        <div class="editor-container">
+          <div class="editor-tabs" id="editor-tabs"></div>
+          <div class="editor-content" id="editor-content">
+            <div class="welcome-screen">
+              <h2>Welcome to Geese Editor</h2>
+              <p>Select a .geese file, pipe, or config file from the sidebar to get started.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

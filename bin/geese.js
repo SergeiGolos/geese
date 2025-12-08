@@ -21,6 +21,7 @@ const container = createContainer();
 const configCommand = require('./commands/config-command');
 const newCommand = require('./commands/new-command');
 const runCommand = require('./commands/run-command');
+const editorCommand = require('./commands/editor-command');
 const { launchEditor } = require('./utils/editor-launcher');
 
 const program = new Command();
@@ -161,7 +162,20 @@ const runCommandDefinition = program
     }
   });
 
-
+// Editor command
+program
+  .command('editor [directory]')
+  .description('Launch web-based editor for .geese files')
+  .option('--port <number>', 'Port to run editor on (default: 3000)', parseInt)
+  .option('--no-browser', 'Don\'t open browser automatically')
+  .action(async (directory, options) => {
+    try {
+      await editorCommand(container, directory || '.', options);
+    } catch (error) {
+      console.error(chalk.red('Error:'), error.message);
+      process.exit(1);
+    }
+  });
 
 // Handle unhandled rejections
 process.on('unhandledRejection', (reason, promise) => {
