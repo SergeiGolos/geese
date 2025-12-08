@@ -23,9 +23,13 @@ router.get('/local', async (req, res) => {
     }
 
     const content = await fs.readFile(configPath, 'utf-8');
-    const config = JSON.parse(content);
-    
-    res.json(config);
+    try {
+      const config = JSON.parse(content);
+      res.json(config);
+    } catch (parseError) {
+      console.error('Invalid JSON in local config:', parseError);
+      res.status(500).json({ error: 'Invalid JSON in configuration file', details: parseError.message });
+    }
   } catch (error) {
     console.error('Error reading local config:', error);
     res.status(500).json({ error: error.message });
@@ -45,9 +49,13 @@ router.get('/global', async (req, res) => {
     }
 
     const content = await fs.readFile(configPath, 'utf-8');
-    const config = JSON.parse(content);
-    
-    res.json(config);
+    try {
+      const config = JSON.parse(content);
+      res.json(config);
+    } catch (parseError) {
+      console.error('Invalid JSON in global config:', parseError);
+      res.status(500).json({ error: 'Invalid JSON in configuration file', details: parseError.message });
+    }
   } catch (error) {
     console.error('Error reading global config:', error);
     res.status(500).json({ error: error.message });
@@ -67,7 +75,12 @@ router.get('/merged', async (req, res) => {
     let globalConfig = {};
     if (await fs.pathExists(globalConfigPath)) {
       const content = await fs.readFile(globalConfigPath, 'utf-8');
-      globalConfig = JSON.parse(content);
+      try {
+        globalConfig = JSON.parse(content);
+      } catch (parseError) {
+        console.error('Invalid JSON in global config:', parseError);
+        globalConfig = {};
+      }
     }
     
     // Read local config
@@ -75,7 +88,12 @@ router.get('/merged', async (req, res) => {
     let localConfig = {};
     if (await fs.pathExists(localConfigPath)) {
       const content = await fs.readFile(localConfigPath, 'utf-8');
-      localConfig = JSON.parse(content);
+      try {
+        localConfig = JSON.parse(content);
+      } catch (parseError) {
+        console.error('Invalid JSON in local config:', parseError);
+        localConfig = {};
+      }
     }
     
     // Merge configs (local overrides global)
@@ -252,7 +270,7 @@ function validateConfig(config) {
 function mergeConfigs(global, local) {
   const merged = JSON.parse(JSON.stringify(global)); // Deep clone
   
-  for (const key in local) {
+  for (const key of Object.keys(local)) {
     if (local[key] && typeof local[key] === 'object' && !Array.isArray(local[key])) {
       // Recursively merge nested objects
       merged[key] = mergeConfigs(merged[key] || {}, local[key]);

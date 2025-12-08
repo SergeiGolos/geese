@@ -523,6 +523,10 @@ async function showSettingsModal() {
       fetch('/api/config/merged')
     ]);
 
+    if (!localRes.ok || !globalRes.ok || !mergedRes.ok) {
+      throw new Error('Failed to load configurations');
+    }
+
     localConfig = await localRes.json();
     globalConfig = await globalRes.json();
     mergedConfig = await mergedRes.json();
@@ -540,13 +544,13 @@ async function showSettingsModal() {
         <h3>⚙️ Configuration Settings</h3>
         
         <div class="settings-tabs">
-          <div class="settings-tab active" onclick="switchConfigTab('local')">
+          <div class="settings-tab active" onclick="switchConfigTab('local', event)">
             Local (.geese/config.json)
           </div>
-          <div class="settings-tab" onclick="switchConfigTab('global')">
+          <div class="settings-tab" onclick="switchConfigTab('global', event)">
             Global (~/.geese/config.json)
           </div>
-          <div class="settings-tab" onclick="switchConfigTab('preview')">
+          <div class="settings-tab" onclick="switchConfigTab('preview', event)">
             Preview (Merged)
           </div>
         </div>
@@ -585,10 +589,12 @@ async function showSettingsModal() {
   }
 }
 
-function switchConfigTab(tab) {
+function switchConfigTab(tab, event) {
   // Update tabs
   document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
+  if (event && event.target) {
+    event.target.classList.add('active');
+  }
 
   // Update sections
   document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
@@ -795,7 +801,9 @@ async function saveCurrentConfig() {
     
     // Reload merged config
     const mergedRes = await fetch('/api/config/merged');
-    mergedConfig = await mergedRes.json();
+    if (mergedRes.ok) {
+      mergedConfig = await mergedRes.json();
+    }
     
     // Update preview if visible
     const previewDiv = document.querySelector('#preview-settings .config-preview');
