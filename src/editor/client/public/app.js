@@ -511,9 +511,10 @@ window.addEventListener('beforeunload', (e) => {
 // PHASE 4: LOG VIEWER
 // ============================================
 
-let currentView = 'editor'; // 'editor' or 'logs'
+let currentView = 'editor'; // 'editor', 'logs', or 'pipes'
 let logs = [];
 let selectedLog = null;
+let pipesLoaded = false; // Track if pipes have been loaded
 
 /**
  * Escape HTML to prevent XSS
@@ -528,23 +529,38 @@ function escapeHtml(text) {
  * Toggle between editor and logs view
  */
 async function toggleLogsView() {
+  if (currentView === 'logs') {
+    return; // Already in logs view
+  }
+  
+  currentView = 'logs';
+  updateViewDisplay();
+  await loadLogs();
+}
+
+/**
+ * Update view display based on currentView state
+ */
+function updateViewDisplay() {
+  const sidebar = document.querySelector('.sidebar');
   const editorContainer = document.querySelector('.editor-container');
   const logsView = document.getElementById('logs-view');
-  const logsToggleBtn = document.getElementById('logs-toggle');
-
+  const pipesView = document.getElementById('pipes-view');
+  
+  // Hide all views first
+  sidebar.style.display = 'none';
+  editorContainer.style.display = 'none';
+  logsView.classList.remove('active');
+  pipesView.classList.remove('active');
+  
+  // Show the current view
   if (currentView === 'editor') {
-    // Switch to logs view
-    editorContainer.style.display = 'none';
-    logsView.classList.add('active');
-    logsToggleBtn.textContent = '✏️ Editor';
-    currentView = 'logs';
-    await loadLogs();
-  } else {
-    // Switch to editor view
+    sidebar.style.display = 'flex';
     editorContainer.style.display = 'flex';
-    logsView.classList.remove('active');
-    logsToggleBtn.textContent = '📋 Logs';
-    currentView = 'editor';
+  } else if (currentView === 'logs') {
+    logsView.classList.add('active');
+  } else if (currentView === 'pipes') {
+    pipesView.classList.add('active');
   }
 }
 
@@ -725,35 +741,29 @@ function formatTimestamp(isoString) {
  * Toggle editor view
  */
 function toggleEditorView() {
-  const editorContainer = document.querySelector('.sidebar');
-  const editorContent = document.querySelector('.editor-container');
-  const logsView = document.getElementById('logs-view');
-  const pipesView = document.getElementById('pipes-view');
+  if (currentView === 'editor') {
+    return; // Already in editor view
+  }
   
-  editorContainer.style.display = 'flex';
-  editorContent.style.display = 'flex';
-  logsView.classList.remove('active');
-  pipesView.classList.remove('active');
+  currentView = 'editor';
+  updateViewDisplay();
 }
 
 /**
  * Toggle pipes view
  */
 function togglePipesView() {
-  const editorContainer = document.querySelector('.sidebar');
-  const editorContent = document.querySelector('.editor-container');
-  const logsView = document.getElementById('logs-view');
-  const pipesView = document.getElementById('pipes-view');
+  if (currentView === 'pipes') {
+    return; // Already in pipes view
+  }
   
-  editorContainer.style.display = 'none';
-  editorContent.style.display = 'none';
-  logsView.classList.remove('active');
-  pipesView.classList.add('active');
+  currentView = 'pipes';
+  updateViewDisplay();
   
   // Load pipes if not already loaded
-  if (!window.pipesLoaded) {
+  if (!pipesLoaded) {
     loadPipes();
-    window.pipesLoaded = true;
+    pipesLoaded = true;
   }
 }
 
