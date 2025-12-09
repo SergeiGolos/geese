@@ -534,6 +534,203 @@
         padding: 40px 20px;
         color: #888;
       }
+
+      /* Pipes Browser Styles */
+      .pipes-view {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+        background-color: #1e1e1e;
+      }
+
+      .pipes-view.active {
+        display: flex;
+      }
+
+      .pipes-split {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .pipes-sidebar {
+        width: 300px;
+        background-color: #252526;
+        border-right: 1px solid #555;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+      }
+
+      .pipes-sidebar-header {
+        padding: 15px;
+        background-color: #2d2d30;
+        font-size: 14px;
+        font-weight: 600;
+        border-bottom: 1px solid #555;
+        color: #cccccc;
+      }
+
+      .pipes-filter {
+        padding: 10px 15px;
+        background-color: #2d2d30;
+        border-bottom: 1px solid #555;
+      }
+
+      .pipes-filter input {
+        width: 100%;
+        padding: 6px 10px;
+        background-color: #3c3c3c;
+        border: 1px solid #555;
+        border-radius: 3px;
+        color: #cccccc;
+        font-size: 12px;
+      }
+
+      .pipes-filter input:focus {
+        outline: none;
+        border-color: #007acc;
+      }
+
+      .pipes-category {
+        padding: 8px 15px;
+        background-color: #2d2d30;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #888;
+        border-bottom: 1px solid #333;
+      }
+
+      .pipes-list {
+        flex: 1;
+        overflow-y: auto;
+      }
+
+      .pipe-item {
+        padding: 8px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #333;
+        transition: background-color 0.2s;
+        font-size: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .pipe-item:hover {
+        background-color: #2a2d2e;
+      }
+
+      .pipe-item.active {
+        background-color: #094771;
+        color: #ffffff;
+      }
+
+      .pipe-item-name {
+        font-family: 'Courier New', Courier, monospace;
+        color: #4ec9b0;
+      }
+
+      .pipe-item.active .pipe-item-name {
+        color: #ffffff;
+      }
+
+      .pipe-item-badge {
+        font-size: 9px;
+        padding: 2px 5px;
+        border-radius: 2px;
+        background-color: #007acc;
+        color: white;
+        text-transform: uppercase;
+        font-weight: 600;
+      }
+
+      .pipe-item-badge.custom {
+        background-color: #6a9955;
+      }
+
+      .pipe-detail-panel {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background-color: #1e1e1e;
+      }
+
+      .pipe-detail-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #888;
+        text-align: center;
+      }
+
+      .pipe-detail-empty h2 {
+        font-size: 24px;
+        margin-bottom: 10px;
+        color: #cccccc;
+      }
+
+      .pipe-detail-content h2 {
+        font-size: 24px;
+        margin-bottom: 10px;
+        color: #cccccc;
+        font-family: 'Courier New', Courier, monospace;
+      }
+
+      .pipe-detail-content h3 {
+        font-size: 14px;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        color: #4ec9b0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+      }
+
+      .pipe-detail-content p {
+        line-height: 1.6;
+        margin-bottom: 15px;
+      }
+
+      .pipe-detail-meta {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        font-size: 12px;
+      }
+
+      .pipe-detail-meta-item {
+        display: flex;
+        gap: 5px;
+      }
+
+      .pipe-detail-meta-label {
+        color: #888;
+      }
+
+      .pipe-detail-meta-value {
+        color: #cccccc;
+        font-weight: 600;
+      }
+
+      .pipe-example {
+        background-color: #2d2d30;
+        border: 1px solid #555;
+        border-radius: 3px;
+        padding: 10px;
+        margin-bottom: 8px;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 12px;
+        color: #ce9178;
+      }
+
+      .pipe-example-comment {
+        color: #6a9955;
+      }
     </style>
   </head>
   <body>
@@ -541,9 +738,11 @@
     <div id="root">
       <div class="header">
         <h1>🦢 Geese Editor</h1>
-        <span class="badge">Phase 4</span>
+        <span class="badge">Phase 5</span>
         <div style="flex: 1;"></div>
+        <button class="btn btn-secondary" onclick="toggleEditorView()" id="editor-toggle">📝 Editor</button>
         <button class="btn btn-secondary" onclick="toggleLogsView()" id="logs-toggle">📋 Logs</button>
+        <button class="btn btn-secondary" onclick="togglePipesView()" id="pipes-toggle">🔧 Pipes</button>
       </div>
       <div class="main-container">
         <div class="sidebar">
@@ -590,6 +789,28 @@
               <div class="log-empty">
                 <h2>No Log Selected</h2>
                 <p>Select a log from the sidebar to view its details</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Pipes View -->
+        <div class="pipes-view" id="pipes-view">
+          <div class="pipes-split">
+            <div class="pipes-sidebar">
+              <div class="pipes-sidebar-header">
+                Available Pipes
+              </div>
+              <div class="pipes-filter">
+                <input type="text" id="pipes-search" placeholder="Search pipes..." onkeyup="filterPipes()" />
+              </div>
+              <div class="pipes-list" id="pipes-list">
+                <div style="padding: 20px; text-align: center; color: #888;">Loading pipes...</div>
+              </div>
+            </div>
+            <div class="pipe-detail-panel" id="pipe-detail">
+              <div class="pipe-detail-empty">
+                <h2>No Pipe Selected</h2>
+                <p>Select a pipe from the sidebar to view its details</p>
               </div>
             </div>
           </div>

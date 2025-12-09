@@ -721,6 +721,222 @@ function formatTimestamp(isoString) {
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
 }
 
+/**
+ * Toggle editor view
+ */
+function toggleEditorView() {
+  const editorContainer = document.querySelector('.sidebar');
+  const editorContent = document.querySelector('.editor-container');
+  const logsView = document.getElementById('logs-view');
+  const pipesView = document.getElementById('pipes-view');
+  
+  editorContainer.style.display = 'flex';
+  editorContent.style.display = 'flex';
+  logsView.classList.remove('active');
+  pipesView.classList.remove('active');
+}
+
+/**
+ * Toggle pipes view
+ */
+function togglePipesView() {
+  const editorContainer = document.querySelector('.sidebar');
+  const editorContent = document.querySelector('.editor-container');
+  const logsView = document.getElementById('logs-view');
+  const pipesView = document.getElementById('pipes-view');
+  
+  editorContainer.style.display = 'none';
+  editorContent.style.display = 'none';
+  logsView.classList.remove('active');
+  pipesView.classList.add('active');
+  
+  // Load pipes if not already loaded
+  if (!window.pipesLoaded) {
+    loadPipes();
+    window.pipesLoaded = true;
+  }
+}
+
+/**
+ * Load and display all available pipes
+ */
+async function loadPipes() {
+  try {
+    const response = await fetch('/api/pipes');
+    if (!response.ok) {
+      throw new Error('Failed to load pipes');
+    }
+    
+    const data = await response.json();
+    const pipesListEl = document.getElementById('pipes-list');
+    
+    if (!data.pipes || data.pipes.length === 0) {
+      pipesListEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">No pipes available</div>';
+      return;
+    }
+    
+    // Group pipes by category
+    const pipesByCategory = {};
+    data.pipes.forEach(pipe => {
+      if (!pipesByCategory[pipe.category]) {
+        pipesByCategory[pipe.category] = [];
+      }
+      pipesByCategory[pipe.category].push(pipe);
+    });
+    
+    // Render pipes grouped by category
+    let html = '';
+    const categories = Object.keys(pipesByCategory).sort();
+    
+    for (const category of categories) {
+      html += `<div class="pipes-category">${category}</div>`;
+      pipesByCategory[category].forEach(pipe => {
+        const badgeClass = pipe.isBuiltin ? '' : 'custom';
+        const badgeText = pipe.isBuiltin ? 'built-in' : 'custom';
+        html += `
+          <div class="pipe-item" onclick="selectPipe('${pipe.name}')" data-pipe="${pipe.name}" data-category="${pipe.category}">
+            <span class="pipe-item-name">${pipe.name}</span>
+            <span class="pipe-item-badge ${badgeClass}">${badgeText}</span>
+          </div>
+        `;
+      });
+    }
+    
+    pipesListEl.innerHTML = html;
+    
+    // Store pipes data for filtering
+    window.allPipes = data.pipes;
+  } catch (error) {
+    console.error('Error loading pipes:', error);
+    document.getElementById('pipes-list').innerHTML = 
+      '<div style="padding: 20px; text-align: center; color: #f48771;">Failed to load pipes</div>';
+  }
+}
+
+/**
+ * Select and display pipe details
+ */
+async function selectPipe(pipeName) {
+  try {
+    // Update active state in sidebar
+    document.querySelectorAll('.pipe-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    const selectedItem = document.querySelector(`.pipe-item[data-pipe="${pipeName}"]`);
+    if (selectedItem) {
+      selectedItem.classList.add('active');
+    }
+    
+    // Fetch pipe details
+    const response = await fetch(`/api/pipes/${encodeURIComponent(pipeName)}`);
+    if (!response.ok) {
+      throw new Error('Failed to load pipe details');
+    }
+    
+    const pipe = await response.json();
+    
+    // Render pipe details
+    const detailEl = document.getElementById('pipe-detail');
+    const sourceColor = pipe.isBuiltin ? '#007acc' : '#6a9955';
+    const sourceLabel = pipe.isBuiltin ? 'Built-in' : `Custom (${pipe.source})`;
+    
+    let examplesHtml = '';
+    if (pipe.examples && pipe.examples.length > 0) {
+      pipe.examples.forEach(example => {
+        // Check if example contains comment
+        if (example.includes('//')) {
+          const parts = example.split('//');
+          examplesHtml += `<div class="pipe-example">${escapeHtml(parts[0])}<span class="pipe-example-comment">// ${escapeHtml(parts[1])}</span></div>`;
+        } else {
+          examplesHtml += `<div class="pipe-example">${escapeHtml(example)}</div>`;
+        }
+      });
+    } else {
+      examplesHtml = '<p style="color: #888;">No examples available</p>';
+    }
+    
+    detailEl.innerHTML = `
+      <div class="pipe-detail-content">
+        <h2>${pipe.name}</h2>
+        <div class="pipe-detail-meta">
+          <div class="pipe-detail-meta-item">
+            <span class="pipe-detail-meta-label">Category:</span>
+            <span class="pipe-detail-meta-value">${pipe.category}</span>
+          </div>
+          <div class="pipe-detail-meta-item">
+            <span class="pipe-detail-meta-label">Source:</span>
+            <span class="pipe-detail-meta-value" style="color: ${sourceColor}">${sourceLabel}</span>
+          </div>
+        </div>
+        <h3>Description</h3>
+        <p>${pipe.description}</p>
+        <h3>Usage Examples</h3>
+        ${examplesHtml}
+      </div>
+    `;
+  } catch (error) {
+    console.error('Error loading pipe details:', error);
+    document.getElementById('pipe-detail').innerHTML = `
+      <div class="pipe-detail-empty">
+        <h2>Error Loading Pipe</h2>
+        <p>Failed to load details for ${pipeName}</p>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Filter pipes by search term
+ */
+function filterPipes() {
+  const searchTerm = document.getElementById('pipes-search').value.toLowerCase();
+  
+  if (!window.allPipes) return;
+  
+  // Filter pipes
+  const filtered = window.allPipes.filter(pipe => 
+    pipe.name.toLowerCase().includes(searchTerm) || 
+    pipe.category.toLowerCase().includes(searchTerm)
+  );
+  
+  // Re-render filtered results
+  const pipesListEl = document.getElementById('pipes-list');
+  
+  if (filtered.length === 0) {
+    pipesListEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">No pipes match your search</div>';
+    return;
+  }
+  
+  // Group filtered pipes by category
+  const pipesByCategory = {};
+  filtered.forEach(pipe => {
+    if (!pipesByCategory[pipe.category]) {
+      pipesByCategory[pipe.category] = [];
+    }
+    pipesByCategory[pipe.category].push(pipe);
+  });
+  
+  // Render filtered pipes
+  let html = '';
+  const categories = Object.keys(pipesByCategory).sort();
+  
+  for (const category of categories) {
+    html += `<div class="pipes-category">${category}</div>`;
+    pipesByCategory[category].forEach(pipe => {
+      const badgeClass = pipe.isBuiltin ? '' : 'custom';
+      const badgeText = pipe.isBuiltin ? 'built-in' : 'custom';
+      html += `
+        <div class="pipe-item" onclick="selectPipe('${pipe.name}')" data-pipe="${pipe.name}" data-category="${pipe.category}">
+          <span class="pipe-item-name">${pipe.name}</span>
+          <span class="pipe-item-badge ${badgeClass}">${badgeText}</span>
+        </div>
+      `;
+    });
+  }
+  
+  pipesListEl.innerHTML = html;
+}
+
 // Initialize on page load
 window.addEventListener('DOMContentLoaded', () => {
   loadFiles();
