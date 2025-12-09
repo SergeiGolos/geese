@@ -40,7 +40,7 @@ Web-based IDE for managing `.geese` files, pipes, and configuration.
 - **Syntax Highlighting**: JSON syntax highlighting for config files
 - **Same UX**: Consistent editing experience across all file types (geese, pipes, config)
 
-## Phase 4 Implementation (Current)
+## Phase 4 Implementation
 
 **Status**: ✅ Complete
 
@@ -119,4 +119,4 @@ The editor uses:
 - **Editor**: Monaco Editor (with textarea fallback)
 - **Styling**: Inline CSS with VS Code theme
 
-No build process is required for Phase 1. The frontend is served as static files.
+No build process is required. The frontend is served as static files.

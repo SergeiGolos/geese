@@ -1,6 +1,6 @@
 ---
 title: "ADR-0005: Editor Mode Web Interface"
-status: "Proposed"
+status: "Accepted"
 date: "2025-12-08"
 authors: "Geese Development Team"
 tags: ["architecture", "decision", "ui", "editor", "web-interface"]
@@ -191,7 +191,7 @@ POST   /api/run                      - Execute .geese file (dry-run or actual)
 
 **Frontend Architecture**
 
-- **Framework**: React with React Router for navigation
+- **Framework**: Vanilla JavaScript with no build step required for navigation
 - **State Management**: React Context API for global state
 - **UI Components**: Custom component library inspired by VS Code
 - **Monaco Editor**: `@monaco-editor/react` wrapper
