@@ -105,3 +105,6 @@ tmp/
 temp/
 syntax-ts/dist/
 syntax-ts/out/
+
+# Local .geese directory (for testing)
+/.geese/

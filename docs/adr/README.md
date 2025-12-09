@@ -28,6 +28,7 @@ What becomes easier or more difficult to do because of this change?
 - [ADR-002: Dependency Injection Container](./ADR-002-dependency-injection-container.md)
 - [ADR-003: Event-Driven Cross-Cutting Concerns](./ADR-003-event-driven-cross-cutting-concerns.md)
 - [ADR-004: JSDoc Documentation Standard](./ADR-004-jsdoc-documentation-standard.md)
+- [ADR-005: Editor Mode Web Interface](./adr-0005-editor-mode-web-interface.md)
 
 ## Creating New ADRs
 
