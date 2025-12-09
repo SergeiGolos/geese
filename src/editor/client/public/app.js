@@ -233,10 +233,15 @@ async function loadFile(scope, type, filename) {
     isModified = false;
     
     // Update tabs with toolbar
+    const runButton = filename.endsWith('.geese') 
+      ? '<button class="btn btn-run btn-small" id="run-btn" onclick="runGeeseFile()">▶ Run</button>' 
+      : '';
+    
     document.getElementById('editor-tabs').innerHTML = `
       <div class="toolbar">
         <div class="editor-tab active">${filename}</div>
         <div class="spacer"></div>
+        ${runButton}
         <button class="btn btn-primary btn-small" onclick="saveFile()">Save (Ctrl+S)</button>
         <button class="btn btn-danger btn-small" onclick="confirmDeleteFile()">Delete</button>
       </div>
@@ -345,6 +350,146 @@ async function confirmDeleteFile() {
   } catch (error) {
     console.error('Error deleting file:', error);
     showStatus(`Error deleting file: ${error.message}`, 'error');
+  }
+}
+
+// Run a .geese file
+async function runGeeseFile() {
+  if (!activeFile || !activeFile.name.endsWith('.geese')) {
+    showStatus('Can only run .geese files', 'error');
+    return;
+  }
+
+  // Save file first if modified
+  if (isModified) {
+    showStatus('Saving file before running...', 'info');
+    await saveFile();
+    // Wait a bit for save to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  const runBtn = document.getElementById('run-btn');
+  if (runBtn) {
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running...';
+    runBtn.classList.add('btn-running');
+  }
+
+  // Show output panel
+  showExecutionOutput('Running...', 'running');
+
+  try {
+    const response = await fetch('/api/run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        scope: activeFile.scope,
+        filename: activeFile.name
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.details || error.error || 'Failed to run file');
+    }
+
+    const result = await response.json();
+    
+    // Build output HTML
+    let outputHtml = '';
+    
+    if (result.sessions.length === 0) {
+      outputHtml = '<div class="output-message info">No files matched the include/exclude patterns</div>';
+    } else {
+      const icon = result.success ? '✅' : '❌';
+      const statusClass = result.success ? 'success' : 'error';
+      const durationSec = (result.duration / 1000).toFixed(2);
+      
+      outputHtml += `<div class="output-message ${statusClass}">${icon} ${result.message} in ${durationSec}s</div>`;
+      
+      result.sessions.forEach((session, index) => {
+        const sessionIcon = session.success ? '✅' : '❌';
+        const sessionStatus = session.success ? 'success' : 'error';
+        const sessionDuration = (session.duration / 1000).toFixed(2);
+        
+        outputHtml += `
+          <div class="output-session ${sessionStatus}">
+            <div class="output-session-header">
+              ${sessionIcon} Session ${index + 1}/${result.sessions.length}: ${escapeHtml(session.file)} (${sessionDuration}s)
+            </div>
+            <div class="output-session-content">
+              ${session.success 
+                ? `<pre>${escapeHtml(session.output || 'No output')}</pre>` 
+                : `<pre class="error">${escapeHtml(session.error || 'Unknown error')}</pre>`
+              }
+            </div>
+          </div>
+        `;
+      });
+    }
+    
+    showExecutionOutput(outputHtml, result.success ? 'success' : 'error');
+    showStatus(result.message, result.success ? 'success' : 'error');
+    
+  } catch (error) {
+    console.error('Error running file:', error);
+    const errorHtml = `<div class="output-message error">❌ Error: ${escapeHtml(error.message)}</div>`;
+    showExecutionOutput(errorHtml, 'error');
+    showStatus(`Error running file: ${error.message}`, 'error');
+  } finally {
+    if (runBtn) {
+      runBtn.disabled = false;
+      runBtn.textContent = '▶ Run';
+      runBtn.classList.remove('btn-running');
+    }
+  }
+}
+
+// Show execution output in a panel
+function showExecutionOutput(content, status) {
+  let outputPanel = document.getElementById('output-panel');
+  
+  if (!outputPanel) {
+    // Create output panel
+    outputPanel = document.createElement('div');
+    outputPanel.id = 'output-panel';
+    outputPanel.className = 'output-panel expanded';
+    outputPanel.innerHTML = `
+      <div class="output-header">
+        <span class="output-title">▼ Execution Output</span>
+        <button class="output-close" onclick="toggleOutputPanel()">Collapse</button>
+      </div>
+      <div class="output-content"></div>
+    `;
+    
+    const editorContent = document.getElementById('editor-content');
+    editorContent.parentNode.insertBefore(outputPanel, editorContent.nextSibling);
+  }
+  
+  // Update content
+  const contentDiv = outputPanel.querySelector('.output-content');
+  contentDiv.innerHTML = content;
+  contentDiv.className = 'output-content ' + status;
+  
+  // Expand panel
+  outputPanel.classList.add('expanded');
+  outputPanel.querySelector('.output-title').textContent = '▼ Execution Output';
+}
+
+// Toggle output panel
+function toggleOutputPanel() {
+  const outputPanel = document.getElementById('output-panel');
+  if (!outputPanel) return;
+  
+  const isExpanded = outputPanel.classList.contains('expanded');
+  if (isExpanded) {
+    outputPanel.classList.remove('expanded');
+    outputPanel.querySelector('.output-title').textContent = '▶ Execution Output';
+  } else {
+    outputPanel.classList.add('expanded');
+    outputPanel.querySelector('.output-title').textContent = '▼ Execution Output';
   }
 }
 
