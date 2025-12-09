@@ -15,12 +15,71 @@ const esprima = require('esprima');
  * Get list of all .geese files and pipes
  * Returns files from both local (.geese/) and global (~/.geese/) locations
  */
+
+/**
+ * Helper: Get base directory for scope
+ */
+function getBaseDir(scope, projectDir) {
+  if (scope === 'local') {
+    return path.join(projectDir, '.geese');
+  } else if (scope === 'global') {
+    return path.join(os.homedir(), '.geese');
+  } else if (scope === 'root') {
+    return projectDir;
+  } else {
+    throw new Error('Invalid scope. Must be "local", "global", or "root"');
+  }
+}
+
+/**
+ * Helper: Get file path for type
+ */
+function getFilePath(baseDir, type, filename) {
+  if (type === 'geese') {
+    return path.join(baseDir, filename);
+  } else if (type === 'pipes') {
+    return path.join(baseDir, 'pipes', filename);
+  } else if (type === 'config') {
+    return path.join(baseDir, 'config.json');
+  } else {
+    throw new Error('Invalid type. Must be "geese", "pipes", or "config"');
+  }
+}
+
+/**
+ * Helper: Validate path is within allowed directory (prevents path traversal)
+ * Checks BEFORE file existence to prevent information disclosure
+ */
+async function validatePathSecurity(filePath, baseDir) {
+  // First normalize paths without requiring files to exist
+  const normalizedFilePath = path.normalize(filePath);
+  const normalizedBase = path.normalize(baseDir);
+  const relativePath = path.relative(normalizedBase, normalizedFilePath);
+  
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error('Access denied');
+  }
+  
+  // If file exists, also check realpath (handles symlinks)
+  if (await fs.pathExists(filePath)) {
+    try {
+      const realPath = await fs.realpath(filePath);
+      const realBase = await fs.realpath(baseDir);
+      const realRelativePath = path.relative(realBase, realPath);
+      
+      if (realRelativePath.startsWith('..') || path.isAbsolute(realRelativePath)) {
+        throw new Error('Access denied');
+      }
+    } catch (err) {
+      throw new Error('Access denied');
+    }
+  }
+}
+
 router.get('/', async (req, res) => {
   try {
     const container = req.app.locals.container;
     const projectDir = req.app.locals.projectDir;
-    
-    const geeseFileFinder = container.get('geeseFileFinder');
     
     // Find .geese files in project and global directories
     const localGeeseDir = path.join(projectDir, '.geese');
@@ -92,40 +151,21 @@ router.get('/:scope/:type/:filename', async (req, res) => {
     const { scope, type, filename } = req.params;
     const projectDir = req.app.locals.projectDir;
     
-    let baseDir;
-    if (scope === 'local') {
-      baseDir = path.join(projectDir, '.geese');
-    } else if (scope === 'global') {
-      baseDir = path.join(os.homedir(), '.geese');
-    } else if (scope === 'root') {
-      baseDir = projectDir;
-    } else {
-      return res.status(400).json({ error: 'Invalid scope. Must be "local", "global", or "root"' });
+    
+    const baseDir = getBaseDir(scope, projectDir);
+    const filePath = getFilePath(baseDir, type, filename);
+
+    // Security: Validate path BEFORE checking existence (prevents info disclosure)
+    try {
+      await validatePathSecurity(filePath, baseDir);
+    } catch (err) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
-    let filePath;
-    if (type === 'geese') {
-      filePath = path.join(baseDir, filename);
-    } else if (type === 'pipes') {
-      filePath = path.join(baseDir, 'pipes', filename);
-    } else if (type === 'config') {
-      filePath = path.join(baseDir, 'config.json');
-    } else {
-      return res.status(400).json({ error: 'Invalid type. Must be "geese", "pipes", or "config"' });
-    }
-
-    // Check if file exists first
+    // Check if file exists
     if (!(await fs.pathExists(filePath))) {
       return res.status(404).json({ error: 'File not found' });
     }
-
-    // Security: Ensure path is within allowed directories
-    try {
-      const realPath = await fs.realpath(filePath);
-      const realBase = await fs.realpath(baseDir);
-      if (!realPath.startsWith(realBase)) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
     } catch (err) {
       return res.status(403).json({ error: 'Access denied' });
     }

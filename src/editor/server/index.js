@@ -6,7 +6,6 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs-extra');
 const rateLimit = require('express-rate-limit');
 
 /**
@@ -24,7 +23,7 @@ function createEditorServer(container, options = {}) {
 
   // Middleware
   app.use(cors({
-    origin: `http://localhost:${port}`,
+    origin: [`http://localhost:${port}`, `http://127.0.0.1:${port}`],
     credentials: true
   }));
   app.use(express.json());
