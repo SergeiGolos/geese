@@ -678,28 +678,35 @@ async function selectLog(index) {
 
 /**
  * Simple markdown to HTML renderer
+ * Note: Uses placeholders to preserve code blocks during HTML escaping (prevents XSS)
  */
 function renderMarkdown(markdown) {
   let html = markdown;
 
-  // Code blocks first (preserve content)
+  // Extract code blocks first (will be HTML-escaped and preserved)
   const codeBlocks = [];
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-    const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+    const placeholder = `%%%CODE_BLOCK_${codeBlocks.length}%%%`;
     codeBlocks.push(`<pre><code>${escapeHtml(code)}</code></pre>`);
     return placeholder;
   });
 
-  // Inline code
+  // Extract inline code (will be HTML-escaped and preserved)
   const inlineCodes = [];
   html = html.replace(/`([^`]+)`/g, (match, code) => {
-    const placeholder = `__INLINE_CODE_${inlineCodes.length}__`;
+    const placeholder = `%%%INLINE_CODE_${inlineCodes.length}%%%`;
     inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
     return placeholder;
   });
 
-  // Escape remaining HTML
-  html = escapeHtml(html);
+  // Now escape remaining HTML (but NOT the placeholders with %%% delimiters)
+  const parts = html.split(/(%%%[A-Z_]+_\d+%%%)/);
+  html = parts.map(part => {
+    if (part.startsWith('%%%') && part.endsWith('%%%')) {
+      return part; // Keep placeholder as-is
+    }
+    return escapeHtml(part);
+  }).join('');
 
   // Headers
   html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
@@ -709,7 +716,7 @@ function renderMarkdown(markdown) {
   // Bold
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-  // Tables
+  // Tables (work with escaped HTML now)
   html = html.replace(/\|(.*?)\|\n\|([-:\| ]+)\|\n((?:\|.*?\|\n?)*)/g, (match, header, separator, rows) => {
     const headerCells = header.split('|').filter(c => c.trim()).map(c => `<th>${c.trim()}</th>`).join('');
     const rowCells = rows.trim().split('\n').map(row => {
@@ -719,14 +726,14 @@ function renderMarkdown(markdown) {
     return `<table><thead><tr>${headerCells}</tr></thead><tbody>${rowCells}</tbody></table>`;
   });
 
-  // Restore code blocks
+  // Restore code blocks (they're already properly escaped)
   codeBlocks.forEach((code, i) => {
-    html = html.replace(`__CODE_BLOCK_${i}__`, code);
+    html = html.replace(`%%%CODE_BLOCK_${i}%%%`, code);
   });
 
-  // Restore inline codes
+  // Restore inline codes (they're already properly escaped)
   inlineCodes.forEach((code, i) => {
-    html = html.replace(`__INLINE_CODE_${i}__`, code);
+    html = html.replace(`%%%INLINE_CODE_${i}%%%`, code);
   });
 
   // Line breaks
@@ -803,34 +810,8 @@ async function loadPipes() {
       return;
     }
     
-    // Group pipes by category
-    const pipesByCategory = {};
-    data.pipes.forEach(pipe => {
-      if (!pipesByCategory[pipe.category]) {
-        pipesByCategory[pipe.category] = [];
-      }
-      pipesByCategory[pipe.category].push(pipe);
-    });
-    
-    // Render pipes grouped by category
-    let html = '';
-    const categories = Object.keys(pipesByCategory).sort();
-    
-    for (const category of categories) {
-      html += `<div class="pipes-category">${category}</div>`;
-      pipesByCategory[category].forEach(pipe => {
-        const badgeClass = pipe.isBuiltin ? '' : 'custom';
-        const badgeText = pipe.isBuiltin ? 'built-in' : 'custom';
-        html += `
-          <div class="pipe-item" onclick="selectPipe('${pipe.name}')" data-pipe="${pipe.name}" data-category="${pipe.category}">
-            <span class="pipe-item-name">${pipe.name}</span>
-            <span class="pipe-item-badge ${badgeClass}">${badgeText}</span>
-          </div>
-        `;
-      });
-    }
-    
-    pipesListEl.innerHTML = html;
+    // Render pipes using helper function
+    pipesListEl.innerHTML = renderPipesHTML(data.pipes);
     
     // Store pipes data for filtering
     window.allPipes = data.pipes;
@@ -938,15 +919,24 @@ function filterPipes() {
   }
   
   // Group filtered pipes by category
+  // Render filtered pipes using helper function
+  pipesListEl.innerHTML = renderPipesHTML(filtered);
+}
+
+/**
+ * Helper: Render pipes HTML (eliminates duplication between loadPipes and filterPipes)
+ */
+function renderPipesHTML(pipes) {
+  // Group pipes by category
   const pipesByCategory = {};
-  filtered.forEach(pipe => {
+  pipes.forEach(pipe => {
     if (!pipesByCategory[pipe.category]) {
       pipesByCategory[pipe.category] = [];
     }
     pipesByCategory[pipe.category].push(pipe);
   });
   
-  // Render filtered pipes
+  // Render pipes grouped by category
   let html = '';
   const categories = Object.keys(pipesByCategory).sort();
   
@@ -964,7 +954,7 @@ function filterPipes() {
     });
   }
   
-  pipesListEl.innerHTML = html;
+  return html;
 }
 
 // Initialize on page load
