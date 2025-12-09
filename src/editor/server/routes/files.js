@@ -230,48 +230,22 @@ router.put('/:scope/:type/:filename', async (req, res) => {
     }
 
     const projectDir = req.app.locals.projectDir;
-    
-    let baseDir;
-    if (scope === 'local') {
-      baseDir = path.join(projectDir, '.geese');
-    } else if (scope === 'global') {
-      baseDir = path.join(os.homedir(), '.geese');
-    } else if (scope === 'root') {
-      baseDir = projectDir;
-    } else {
-      return res.status(400).json({ error: 'Invalid scope' });
-    }
-
-    let filePath;
-    if (type === 'geese') {
-      filePath = path.join(baseDir, filename);
-    } else if (type === 'pipes') {
-      filePath = path.join(baseDir, 'pipes', filename);
-    } else if (type === 'config') {
-      filePath = path.join(baseDir, 'config.json');
-    } else {
-      return res.status(400).json({ error: 'Invalid type' });
-    }
+    const baseDir = getBaseDir(scope, projectDir);
+    const filePath = getFilePath(baseDir, type, filename);
 
     // Ensure directory exists
     await fs.ensureDir(path.dirname(filePath));
 
-    // Check if file exists first
-    if (!(await fs.pathExists(filePath))) {
-      return res.status(404).json({ error: 'File not found' });
-    }
-
-    // Security: Ensure path is within allowed directories (before validation)
+    // Security: Validate path BEFORE checking existence (prevents info disclosure)
     try {
-      const realPath = await fs.realpath(filePath);
-      const realBase = await fs.realpath(baseDir);
-      // Use path.relative for cross-platform compatibility
-      const relativePath = path.relative(realBase, realPath);
-      if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
+      await validatePathSecurity(filePath, baseDir);
     } catch (err) {
       return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Check if file exists
+    if (!(await fs.pathExists(filePath))) {
+      return res.status(404).json({ error: 'File not found' });
     }
 
     // Validate content before saving
@@ -328,32 +302,17 @@ router.post('/:scope/:type', async (req, res) => {
     }
 
     const projectDir = req.app.locals.projectDir;
+    const baseDir = getBaseDir(scope, projectDir);
     
-    let baseDir;
-    if (scope === 'local') {
-      baseDir = path.join(projectDir, '.geese');
-    } else if (scope === 'global') {
-      baseDir = path.join(os.homedir(), '.geese');
-    } else if (scope === 'root') {
-      baseDir = projectDir;
-    } else {
-      return res.status(400).json({ error: 'Invalid scope' });
+    // Handle filename extensions
+    let adjustedFilename = filename;
+    if (type === 'geese' && !filename.endsWith('.geese')) {
+      adjustedFilename = `${filename}.geese`;
+    } else if (type === 'pipes' && !filename.endsWith('.js')) {
+      adjustedFilename = `${filename}.js`;
     }
-
-    let filePath;
-    if (type === 'geese') {
-      // Ensure .geese extension
-      const fileName = filename.endsWith('.geese') ? filename : `${filename}.geese`;
-      filePath = path.join(baseDir, fileName);
-    } else if (type === 'pipes') {
-      // Ensure .js extension
-      const fileName = filename.endsWith('.js') ? filename : `${filename}.js`;
-      filePath = path.join(baseDir, 'pipes', fileName);
-    } else if (type === 'config') {
-      filePath = path.join(baseDir, 'config.json');
-    } else {
-      return res.status(400).json({ error: 'Invalid type' });
-    }
+    
+    const filePath = getFilePath(baseDir, type, adjustedFilename)
 
     // Check if file already exists
     if (await fs.pathExists(filePath)) {
@@ -406,52 +365,24 @@ router.delete('/:scope/:type/:filename', async (req, res) => {
     const { scope, type, filename } = req.params;
     const projectDir = req.app.locals.projectDir;
     
-    let baseDir;
-    if (scope === 'local') {
-      baseDir = path.join(projectDir, '.geese');
-    } else if (scope === 'global') {
-      baseDir = path.join(os.homedir(), '.geese');
-    } else if (scope === 'root') {
-      baseDir = projectDir;
-    } else {
-      return res.status(400).json({ error: 'Invalid scope' });
-    }
-
-    let filePath;
-    if (type === 'geese') {
-      filePath = path.join(baseDir, filename);
-    } else if (type === 'pipes') {
-      filePath = path.join(baseDir, 'pipes', filename);
-    } else if (type === 'config') {
+    // Config files cannot be deleted
+    if (type === 'config') {
       return res.status(403).json({ error: 'Cannot delete config file' });
-    } else {
-      return res.status(400).json({ error: 'Invalid type' });
     }
+    
+    const baseDir = getBaseDir(scope, projectDir);
+    const filePath = getFilePath(baseDir, type, filename);
 
-    // Security: Validate path before checking existence (prevent info disclosure)
-    // First check if the path would be within allowed directories
-    const normalizedFilePath = path.normalize(filePath);
-    const normalizedBase = path.normalize(baseDir);
-    const relativePath = path.relative(normalizedBase, normalizedFilePath);
-    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    // Security: Validate path BEFORE checking existence (prevents info disclosure)
+    try {
+      await validatePathSecurity(filePath, baseDir);
+    } catch (err) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
     // Check if file exists
     if (!(await fs.pathExists(filePath))) {
       return res.status(404).json({ error: 'File not found' });
-    }
-
-    // Security: Ensure real path is within allowed directories (handle symlinks)
-    try {
-      const realPath = await fs.realpath(filePath);
-      const realBase = await fs.realpath(baseDir);
-      const realRelativePath = path.relative(realBase, realPath);
-      if (realRelativePath.startsWith('..') || path.isAbsolute(realRelativePath)) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-    } catch (err) {
-      return res.status(403).json({ error: 'Access denied' });
     }
 
     // Delete file

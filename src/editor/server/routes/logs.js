@@ -104,17 +104,31 @@ router.get('/:filename', async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const logPath = path.join(projectDir, 'logs', filename);
+    const logsDir = path.join(projectDir, 'logs');
+    const logPath = path.join(logsDir, filename);
 
-    // Ensure path is within logs directory
-    const realLogPath = await fs.realpath(logPath).catch(() => null);
-    if (!realLogPath) {
+    // Security: Validate path is within logs directory BEFORE checking existence (prevents info disclosure)
+    const normalizedLogsDir = path.resolve(logsDir);
+    const normalizedLogPath = path.resolve(logPath);
+    const relativePath = path.relative(normalizedLogsDir, normalizedLogPath);
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Check if file exists
+    if (!(await fs.pathExists(logPath))) {
       return res.status(404).json({ error: 'Log file not found' });
     }
 
-    const realLogsDir = await fs.realpath(path.join(projectDir, 'logs'));
-    const relativePath = path.relative(realLogsDir, realLogPath);
-    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    // If file exists, also validate realpath (handles symlinks)
+    try {
+      const realLogPath = await fs.realpath(logPath);
+      const realLogsDir = await fs.realpath(logsDir);
+      const realRelativePath = path.relative(realLogsDir, realLogPath);
+      if (realRelativePath.startsWith('..') || path.isAbsolute(realRelativePath)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    } catch (err) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
