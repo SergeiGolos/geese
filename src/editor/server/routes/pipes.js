@@ -90,7 +90,7 @@ router.get('/:name', async (req, res) => {
  * @returns {string} Category
  */
 function categorizePipe(name) {
-  // String operations (join and split for strings)
+  // String operations
   if (['trim', 'toUpperCase', 'toLowerCase', 'substring', 'replace', 'split', 'join', 
        'startsWith', 'endsWith', 'includes', 'concat', 'repeat', 'padStart', 'padEnd'].includes(name)) {
     return 'String';
@@ -106,7 +106,7 @@ function categorizePipe(name) {
     return 'JSON';
   }
   
-  // List/Array operations (removed duplicate join and split - they belong in String category)
+  // List/Array operations
   if (['first', 'last', 'slice', 'filter', 'map', 'reduce', 'sort', 'reverse', 
        'unique', 'flatten', 'count', 'sum'].includes(name)) {
     return 'List';

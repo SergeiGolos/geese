@@ -538,29 +538,47 @@ async function toggleLogsView() {
   await loadLogs();
 }
 
+// Cache DOM elements for view management
+const viewElements = {
+  sidebar: null,
+  editorContainer: null,
+  logsView: null,
+  pipesView: null
+};
+
+/**
+ * Initialize cached DOM elements
+ */
+function initViewElements() {
+  viewElements.sidebar = document.querySelector('.sidebar');
+  viewElements.editorContainer = document.querySelector('.editor-container');
+  viewElements.logsView = document.getElementById('logs-view');
+  viewElements.pipesView = document.getElementById('pipes-view');
+}
+
 /**
  * Update view display based on currentView state
  */
 function updateViewDisplay() {
-  const sidebar = document.querySelector('.sidebar');
-  const editorContainer = document.querySelector('.editor-container');
-  const logsView = document.getElementById('logs-view');
-  const pipesView = document.getElementById('pipes-view');
+  // Initialize elements if not cached
+  if (!viewElements.sidebar) {
+    initViewElements();
+  }
   
   // Hide all views first
-  sidebar.style.display = 'none';
-  editorContainer.style.display = 'none';
-  logsView.classList.remove('active');
-  pipesView.classList.remove('active');
+  viewElements.sidebar.style.display = 'none';
+  viewElements.editorContainer.style.display = 'none';
+  viewElements.logsView.classList.remove('active');
+  viewElements.pipesView.classList.remove('active');
   
   // Show the current view
   if (currentView === 'editor') {
-    sidebar.style.display = 'flex';
-    editorContainer.style.display = 'flex';
+    viewElements.sidebar.style.display = 'flex';
+    viewElements.editorContainer.style.display = 'flex';
   } else if (currentView === 'logs') {
-    logsView.classList.add('active');
+    viewElements.logsView.classList.add('active');
   } else if (currentView === 'pipes') {
-    pipesView.classList.add('active');
+    viewElements.pipesView.classList.add('active');
   }
 }
 
@@ -853,10 +871,12 @@ async function selectPipe(pipeName) {
     let examplesHtml = '';
     if (pipe.examples && pipe.examples.length > 0) {
       pipe.examples.forEach(example => {
-        // Check if example contains comment
-        if (example.includes('//')) {
-          const parts = example.split('//');
-          examplesHtml += `<div class="pipe-example">${escapeHtml(parts[0])}<span class="pipe-example-comment">// ${escapeHtml(parts[1])}</span></div>`;
+        // Check if example contains comment (split on first occurrence only)
+        const commentIndex = example.indexOf('//');
+        if (commentIndex !== -1) {
+          const code = example.substring(0, commentIndex);
+          const comment = example.substring(commentIndex + 2);
+          examplesHtml += `<div class="pipe-example">${escapeHtml(code)}<span class="pipe-example-comment">// ${escapeHtml(comment)}</span></div>`;
         } else {
           examplesHtml += `<div class="pipe-example">${escapeHtml(example)}</div>`;
         }
